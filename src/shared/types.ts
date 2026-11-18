@@ -35,6 +35,11 @@ export interface RepoStatus {
   cherryPicking: boolean
 }
 
+export interface RemoteInfo {
+  name: string
+  url: string
+}
+
 export interface StashEntry {
   index: number
   /** e.g. "On main: my wip message" or "WIP on main: abc123 subject" */
@@ -116,6 +121,9 @@ export interface GitApi {
   fetch(repo: string): Promise<void>
   pull(repo: string): Promise<void>
   push(repo: string): Promise<void>
+  remotes(repo: string): Promise<RemoteInfo[]>
+  addRemote(repo: string, name: string, url: string): Promise<void>
+  removeRemote(repo: string, name: string): Promise<void>
   /** persisted open-tab session */
   loadSession(): Promise<Session>
   saveSession(session: Session): Promise<void>

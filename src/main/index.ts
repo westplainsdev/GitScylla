@@ -185,6 +185,13 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('git:fetch', (_e, r: string) => svc(r).fetch())
   ipcMain.handle('git:pull', (_e, r: string) => svc(r).pull())
   ipcMain.handle('git:push', (_e, r: string) => svc(r).push())
+  ipcMain.handle('git:remotes', (_e, r: string) => svc(r).remotes())
+  ipcMain.handle('git:add-remote', (_e, r: string, name: string, url: string) =>
+    svc(r).addRemote(name, url)
+  )
+  ipcMain.handle('git:remove-remote', (_e, r: string, name: string) =>
+    svc(r).removeRemote(name)
+  )
 
   ipcMain.handle('session:load', () => {
     try {

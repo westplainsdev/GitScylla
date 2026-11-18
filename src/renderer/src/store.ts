@@ -5,6 +5,7 @@ import type {
   CredentialEntry,
   FileStatus,
   GitProfile,
+  RemoteInfo,
   RepoInfo,
   RepoStatus,
   StashEntry
@@ -46,6 +47,7 @@ interface RepoState {
   hasMore: boolean
   loadingMore: boolean
   branches: BranchInfo[]
+  remotes: RemoteInfo[]
   stashes: StashEntry[]
   commitFileList: FileStatus[]
   selectedCommit: CommitInfo | null
@@ -102,6 +104,7 @@ export const useRepo = create<RepoState>((set, get) => {
     hasMore: false,
     loadingMore: false,
     branches: [],
+    remotes: [],
     stashes: [],
     commitFileList: [],
     selectedCommit: null,
@@ -187,6 +190,7 @@ export const useRepo = create<RepoState>((set, get) => {
             commits: [],
             hasMore: false,
             branches: [],
+            remotes: [],
             stashes: [],
             selectedCommit: null,
             diffView: null,
@@ -250,13 +254,14 @@ export const useRepo = create<RepoState>((set, get) => {
     refresh: async () => {
       if (!get().repo) return
       const repo = rp()
-      const [status, commits, branches, stashes] = await Promise.all([
+      const [status, commits, branches, remotes, stashes] = await Promise.all([
         window.api.status(repo),
         window.api.log(repo, LOG_PAGE),
         window.api.branches(repo),
+        window.api.remotes(repo),
         window.api.stashList(repo)
       ])
-      set({ status, commits, hasMore: commits.length === LOG_PAGE, branches, stashes })
+      set({ status, commits, hasMore: commits.length === LOG_PAGE, branches, remotes, stashes })
       // keep an open working-tree diff in sync with disk changes
       const dv = get().diffView
       if (dv && !dv.hash && dv.stashIndex === undefined) {

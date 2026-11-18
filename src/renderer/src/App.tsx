@@ -9,6 +9,7 @@ import AuthDialog from './components/AuthDialog'
 import ProfileSidebar from './components/ProfileSidebar'
 import DiffDrawer from './components/DiffDrawer'
 import CommitDetail from './components/CommitDetail'
+import RemoteBanner from './components/RemoteBanner'
 import Splash from './components/Splash'
 
 export default function App(): React.JSX.Element {
@@ -64,7 +65,10 @@ export default function App(): React.JSX.Element {
       <div className="body">
         <ChangesPane />
         <div className="main-pane">
-          <CommitGraph commits={commits} />
+          <div className="graph-col">
+            <RemoteBanner />
+            <CommitGraph commits={commits} />
+          </div>
           <CommitDetail />
         </div>
       </div>

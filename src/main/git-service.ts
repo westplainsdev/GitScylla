@@ -5,6 +5,7 @@ import type {
   BranchInfo,
   CommitInfo,
   FileStatus,
+  RemoteInfo,
   RepoInfo,
   RepoStatus,
   StashEntry
@@ -235,6 +236,19 @@ export class GitService {
         ? g.push(['--set-upstream', 'origin', s.current])
         : g.push()
     )
+  }
+
+  async remotes(): Promise<RemoteInfo[]> {
+    const list = await this.require().getRemotes(true)
+    return list.map((r) => ({ name: r.name, url: r.refs.push || r.refs.fetch }))
+  }
+
+  async addRemote(name: string, url: string): Promise<void> {
+    await this.require().addRemote(name, url)
+  }
+
+  async removeRemote(name: string): Promise<void> {
+    await this.require().removeRemote(name)
   }
 
   /** unified diff for a working-tree file; staged diffs are index-vs-HEAD */
