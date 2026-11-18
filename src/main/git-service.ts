@@ -1,11 +1,24 @@
 import { simpleGit, SimpleGit } from 'simple-git'
 import { basename, join } from 'path'
 import { existsSync, mkdirSync, readFileSync } from 'fs'
-import type { BranchInfo, CommitInfo, FileStatus, RepoInfo, RepoStatus } from '../shared/types'
+import type {
+  BranchInfo,
+  CommitInfo,
+  FileStatus,
+  RepoInfo,
+  RepoStatus,
+  StashEntry
+} from '../shared/types'
 import { CredentialStore, hostOf, isAuthError } from './credentials'
 
 const FIELD = '\x1f'
 const RECORD = '\x1e'
+
+/** git reports merge conflicts as errors with these signatures */
+function isConflict(e: unknown): boolean {
+  const m = e instanceof Error ? e.message : String(e)
+  return /Automatic merge failed|CONFLICT|Merge conflict|conflict in/i.test(m)
+}
 
 /** simple-git guards these env vars by default; our askpass flow needs them */
 const GIT_OPTS = {
@@ -106,8 +119,22 @@ export class GitService {
       deleted: s.deleted,
       untracked: s.not_added,
       conflicted: s.conflicted,
-      files: s.files.map((f) => ({ path: f.path, index: f.index, workingDir: f.working_dir }))
+      files: s.files.map((f) => ({ path: f.path, index: f.index, workingDir: f.working_dir })),
+      merging: this.stateFile('MERGE_HEAD'),
+      rebasing:
+        this.stateFile('REBASE_HEAD') ||
+        existsSync(join(this.gitDir(), 'rebase-merge')) ||
+        existsSync(join(this.gitDir(), 'rebase-apply')),
+      cherryPicking: this.stateFile('CHERRY_PICK_HEAD')
     }
+  }
+
+  private gitDir(): string {
+    return join(this.repoPath!, '.git')
+  }
+
+  private stateFile(name: string): boolean {
+    return existsSync(join(this.gitDir(), name))
   }
 
   async log(limit = 500): Promise<CommitInfo[]> {
@@ -181,7 +208,15 @@ export class GitService {
   }
 
   async pull(): Promise<void> {
-    await this.authed(await this.remoteHost(), (g) => g.pull())
+    await this.authed(await this.remoteHost(), async (g) => {
+      try {
+        await g.pull()
+      } catch (e) {
+        // merge conflicts on pull are a state, not a failure — the UI shows the merge banner
+        if (isConflict(e)) return
+        throw e
+      }
+    })
   }
 
   async push(): Promise<void> {
@@ -247,5 +282,75 @@ export class GitService {
     return parentHash
       ? git.diff([parentHash, hash, '--', path])
       : git.raw(['show', '--format=', hash, '--', path])
+  }
+
+  async mergeBranch(name: string): Promise<void> {
+    const git = this.require()
+    try {
+      await git.merge([name])
+    } catch (e) {
+      if (isConflict(e)) return // landed in merge-conflict state — banner handles it
+      throw e
+    }
+  }
+
+  async abortOperation(): Promise<void> {
+    const git = this.require()
+    const s = await this.status()
+    if (s.merging) return git.raw(['merge', '--abort']).then(() => {})
+    if (s.rebasing) return git.raw(['rebase', '--abort']).then(() => {})
+    if (s.cherryPicking) return git.raw(['cherry-pick', '--abort']).then(() => {})
+  }
+
+  /** resolves a conflicted file by taking one side, then stages it */
+  async resolveSide(path: string, side: 'ours' | 'theirs'): Promise<void> {
+    const git = this.require()
+    await git.checkout([`--${side}`, '--', path])
+    await git.add([path])
+  }
+
+  async stash(message?: string): Promise<void> {
+    const args = ['stash', 'push']
+    if (message) args.push('-m', message)
+    await this.require().raw(args)
+  }
+
+  async stashList(): Promise<StashEntry[]> {
+    const out = await this.require().raw(['stash', 'list'])
+    if (!out.trim()) return []
+    return out
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const m = line.match(/^stash@\{(\d+)\}:\s*(.*)$/)
+        return m ? { index: Number(m[1]), message: m[2] } : { index: -1, message: line }
+      })
+  }
+
+  async stashApply(index: number): Promise<void> {
+    await this.stashOp('apply', index)
+  }
+
+  async stashPop(index: number): Promise<void> {
+    await this.stashOp('pop', index)
+  }
+
+  async stashDrop(index: number): Promise<void> {
+    await this.stashOp('drop', index)
+  }
+
+  private async stashOp(op: 'apply' | 'pop' | 'drop', index: number): Promise<void> {
+    const git = this.require()
+    try {
+      await git.raw(['stash', op, `stash@{${index}}`])
+    } catch (e) {
+      // apply/pop can land in conflict state — that's a valid outcome
+      if (op !== 'drop' && isConflict(e)) return
+      throw e
+    }
+  }
+
+  async stashShow(index: number): Promise<string> {
+    return this.require().raw(['stash', 'show', '-p', `stash@{${index}}`])
   }
 }

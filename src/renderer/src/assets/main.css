@@ -365,6 +365,71 @@ code {
   letter-spacing: 0.5px;
 }
 
+.merge-btn {
+  margin-left: auto;
+  visibility: hidden;
+}
+
+.branch-row:hover .merge-btn {
+  visibility: visible;
+}
+
+.stash-row .stash-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  visibility: hidden;
+}
+
+.stash-row:hover .stash-actions {
+  visibility: visible;
+}
+
+.stash-empty {
+  padding: 4px 24px 8px;
+}
+
+.count {
+  font-style: normal;
+  color: var(--fg-dim);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* ---------- Merge banner ---------- */
+
+.merge-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(248, 81, 73, 0.12);
+  border-bottom: 1px solid rgba(248, 81, 73, 0.4);
+}
+
+.merge-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.merge-banner-text strong {
+  color: var(--red);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.merge-banner-text span {
+  color: var(--fg-dim);
+  font-size: 11px;
+}
+
+.merge-banner .mini {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 .changes-head {
   padding: 10px 14px;
   font-weight: 600;
@@ -727,6 +792,15 @@ tr.dl-binary td {
   color: var(--fg-dim);
   padding: 24px;
   text-align: center;
+}
+
+tr.dl-conflict td {
+  background: rgba(163, 113, 247, 0.14);
+}
+
+tr.dl-conflict .dl-code {
+  color: #d2a8ff;
+  font-weight: 600;
 }
 
 /* ---------- Modal ---------- */

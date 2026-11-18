@@ -6,7 +6,8 @@ import type {
   FileStatus,
   GitProfile,
   RepoInfo,
-  RepoStatus
+  RepoStatus,
+  StashEntry
 } from '../../shared/types'
 
 interface AuthRequest {
@@ -21,6 +22,8 @@ export interface DiffTarget {
   /** set when viewing a file inside a commit instead of the working tree */
   hash?: string
   parent?: string | null
+  /** set when viewing a stash entry's diff */
+  stashIndex?: number
 }
 
 interface RepoState {
@@ -39,6 +42,7 @@ interface RepoState {
   diffText: string | null
   diffLoading: boolean
   commitFileList: FileStatus[]
+  stashes: StashEntry[]
 
   setError(e: string | null): void
   setAuthRequest(r: AuthRequest | null): void
@@ -92,13 +96,17 @@ export const useRepo = create<RepoState>((set, get) => ({
   diffText: null,
   diffLoading: false,
   commitFileList: [],
+  stashes: [],
 
   openDiff: async (t) => {
     set({ diffView: t, diffLoading: true })
     try {
-      const text = t.hash
-        ? await window.api.commitFileDiff(t.hash, t.parent ?? null, t.path)
-        : await window.api.fileDiff(t.path, t.staged)
+      const text =
+        t.stashIndex !== undefined
+          ? await window.api.stashShow(t.stashIndex)
+          : t.hash
+            ? await window.api.commitFileDiff(t.hash, t.parent ?? null, t.path)
+            : await window.api.fileDiff(t.path, t.staged)
       set({ diffText: text, diffLoading: false })
     } catch (e) {
       set({ error: msg(e), diffLoading: false })
@@ -150,12 +158,13 @@ export const useRepo = create<RepoState>((set, get) => ({
 
   refresh: async () => {
     if (!get().repo) return
-    const [status, commits, branches] = await Promise.all([
+    const [status, commits, branches, stashes] = await Promise.all([
       window.api.status(),
       window.api.log(500),
-      window.api.branches()
+      window.api.branches(),
+      window.api.stashList()
     ])
-    set({ status, commits, branches })
+    set({ status, commits, branches, stashes })
     // keep an open working-tree diff in sync with disk changes
     const dv = get().diffView
     if (dv && !dv.hash) {

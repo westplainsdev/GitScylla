@@ -1,4 +1,6 @@
-export type DiffLineType = 'add' | 'del' | 'ctx' | 'hunk' | 'meta' | 'binary'
+export type DiffLineType = 'add' | 'del' | 'ctx' | 'hunk' | 'meta' | 'binary' | 'conflict'
+
+const CONFLICT_RE = /^(<{7}|={7}|>{7}|\|{7})/
 
 export interface DiffLine {
   type: DiffLineType
@@ -42,6 +44,10 @@ export function parseDiff(text: string): DiffLine[] {
     }
     const marker = raw[0]
     const content = raw.slice(1)
+    if (CONFLICT_RE.test(content)) {
+      out.push({ type: 'conflict', oldNo: null, newNo: null, content: raw })
+      continue
+    }
     if (marker === '+') {
       out.push({ type: 'add', oldNo: null, newNo: newNo++, content })
     } else if (marker === '-') {

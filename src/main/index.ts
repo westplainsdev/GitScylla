@@ -72,6 +72,17 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('git:fetch', () => git.fetch())
   ipcMain.handle('git:pull', () => git.pull())
   ipcMain.handle('git:push', () => git.push())
+  ipcMain.handle('git:merge', (_e, name: string) => git.mergeBranch(name))
+  ipcMain.handle('git:abort-op', () => git.abortOperation())
+  ipcMain.handle('git:resolve-side', (_e, path: string, side: 'ours' | 'theirs') =>
+    git.resolveSide(path, side)
+  )
+  ipcMain.handle('git:stash', (_e, message?: string) => git.stash(message))
+  ipcMain.handle('git:stash-list', () => git.stashList())
+  ipcMain.handle('git:stash-apply', (_e, i: number) => git.stashApply(i))
+  ipcMain.handle('git:stash-pop', (_e, i: number) => git.stashPop(i))
+  ipcMain.handle('git:stash-drop', (_e, i: number) => git.stashDrop(i))
+  ipcMain.handle('git:stash-show', (_e, i: number) => git.stashShow(i))
 
   ipcMain.handle('creds:save', (_e, host: string, username: string, secret: string) =>
     creds.save(host, username, secret)

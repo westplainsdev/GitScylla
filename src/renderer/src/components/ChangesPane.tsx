@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useRepo } from '../store'
 import BranchList from './BranchList'
+import StashList from './StashList'
 
 interface Row {
   path: string
@@ -25,7 +26,8 @@ function Section({
   actionTitle,
   onAction,
   onView,
-  viewing
+  viewing,
+  onResolve
 }: {
   title: string
   rows: Row[]
@@ -34,6 +36,7 @@ function Section({
   onAction: (paths: string[]) => void
   onView: (r: Row) => void
   viewing: string | null
+  onResolve?: (r: Row, side: 'ours' | 'theirs') => void
 }): React.JSX.Element | null {
   if (rows.length === 0) return null
   return (
@@ -55,8 +58,33 @@ function Section({
         >
           <span className={`code code-${r.code === '?' ? 'A' : r.code}`}>{r.code === ' ' ? 'M' : r.code}</span>
           <span className="file-path">{r.path}</span>
+          {onResolve && r.kind === 'conflicted' && (
+            <>
+              <button
+                className="mini"
+                title="Take our version"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onResolve(r, 'ours')
+                }}
+              >
+                ours
+              </button>
+              <button
+                className="mini"
+                title="Take their version"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onResolve(r, 'theirs')
+                }}
+              >
+                theirs
+              </button>
+            </>
+          )}
           <button
             className="mini"
+            title={r.kind === 'conflicted' ? 'Mark resolved (stage)' : actionTitle}
             onClick={(e) => {
               e.stopPropagation()
               onAction([r.path])
@@ -101,6 +129,9 @@ export default function ChangesPane(): React.JSX.Element {
   const viewingPath = diffView && !diffView.hash ? diffView.path : null
   const view = (r: Row): void => void openDiff({ path: r.path, staged: r.kind === 'staged' })
 
+  const resolve = (r: Row, side: 'ours' | 'theirs'): void =>
+    void run('resolving', () => window.api.resolveSide(r.path, side))
+
   const stage = (paths: string[]): void => void run('staging', () => window.api.stage(paths))
   const unstage = (paths: string[]): void => void run('unstaging', () => window.api.unstage(paths))
   const commit = async (): Promise<void> => {
@@ -110,13 +141,32 @@ export default function ChangesPane(): React.JSX.Element {
 
   const clean = staged.length + unstaged.length + untracked.length + conflicted.length === 0
 
+  const inProgress = status.merging || status.rebasing || status.cherryPicking
+  const opLabel = status.merging ? 'merge' : status.rebasing ? 'rebase' : 'cherry-pick'
+
   return (
     <aside className="changes">
+      {inProgress && (
+        <div className="merge-banner">
+          <div className="merge-banner-text">
+            <strong>{opLabel} in progress</strong>
+            <span>
+              {conflicted.length > 0
+                ? `${conflicted.length} conflicted file${conflicted.length > 1 ? 's' : ''} — resolve, then commit`
+                : 'No conflicts — commit to finish'}
+            </span>
+          </div>
+          <button className="mini danger" onClick={() => run('abort', () => window.api.abortOperation())}>
+            Abort
+          </button>
+        </div>
+      )}
       <BranchList />
+      <StashList />
       <div className="changes-head">Changes</div>
       <div className="changes-scroll">
-        {clean && <div className="clean">Working tree clean</div>}
-        <Section title="Conflicted" rows={conflicted} action="stage" actionTitle="Mark resolved" onAction={stage} onView={view} viewing={viewingPath} />
+        {clean && !inProgress && <div className="clean">Working tree clean</div>}
+        <Section title="Conflicted" rows={conflicted} action="✓" actionTitle="Mark resolved" onAction={stage} onView={view} viewing={viewingPath} onResolve={resolve} />
         <Section title="Staged" rows={staged} action="−" actionTitle="Unstage" onAction={unstage} onView={view} viewing={viewingPath} />
         <Section title="Unstaged" rows={unstaged} action="+" actionTitle="Stage" onAction={stage} onView={view} viewing={viewingPath} />
         <Section title="Untracked" rows={untracked} action="+" actionTitle="Stage" onAction={stage} onView={view} viewing={viewingPath} />

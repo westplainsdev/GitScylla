@@ -18,9 +18,12 @@ export default function DiffDrawer(): React.JSX.Element | null {
 
   if (!diffView) return null
 
-  const title = diffView.hash
-    ? `${diffView.path} @ ${diffView.hash.slice(0, 7)}`
-    : `${diffView.path} ${diffView.staged ? '(staged)' : '(working tree)'}`
+  const title =
+    diffView.stashIndex !== undefined
+      ? `${diffView.path} (stash diff)`
+      : diffView.hash
+        ? `${diffView.path} @ ${diffView.hash.slice(0, 7)}`
+        : `${diffView.path} ${diffView.staged ? '(staged)' : '(working tree)'}`
 
   return (
     <aside className="diff-drawer">

@@ -64,6 +64,18 @@ export default function BranchList(): React.JSX.Element {
               <span className="branch-dot">{b.current ? '●' : '○'}</span>
               <span className="branch-name">{b.name}</span>
               {busy && b.current && <span className="branch-busy">{busy}…</span>}
+              {!b.current && (
+                <button
+                  className="mini merge-btn"
+                  title={`Merge ${b.name} into ${status?.current ?? 'current'}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void run('merge', () => window.api.mergeBranch(b.name))
+                  }}
+                >
+                  merge
+                </button>
+              )}
             </div>
           ))}
           {remote.length > 0 && <div className="branch-subhead">Remote</div>}
