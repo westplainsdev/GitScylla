@@ -1335,3 +1335,57 @@ button.danger:hover:not(:disabled) {
 .tb-btn:hover:not(:disabled) svg {
   color: var(--accent);
 }
+
+/* ---------- About section ---------- */
+
+.about-section {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.about-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.about-logo {
+  height: 44px;
+  width: 44px;
+  border-radius: 10px;
+}
+
+.about-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.about-ver {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+.about-tag {
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+.about-link {
+  display: block;
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.about-link:hover {
+  text-decoration: underline;
+}
+
+.about-license {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+}

@@ -211,6 +211,8 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('creds:clear', (_e, host: string) => creds.clear(host))
   ipcMain.handle('creds:list', () => creds.list())
 
+  ipcMain.handle('app:version', () => app.getVersion())
+
   ipcMain.handle('profile:get', async () => {
     const g = simpleGit()
     const get = async (k: string): Promise<string> =>

@@ -129,6 +129,8 @@ export interface GitApi {
   remotes(repo: string): Promise<RemoteInfo[]>
   addRemote(repo: string, name: string, url: string): Promise<void>
   removeRemote(repo: string, name: string): Promise<void>
+  /** app version for the About section */
+  version(): Promise<string>
   /** persisted open-tab session */
   loadSession(): Promise<Session>
   saveSession(session: Session): Promise<void>

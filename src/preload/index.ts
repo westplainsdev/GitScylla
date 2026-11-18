@@ -46,6 +46,7 @@ const api: GitApi = {
   clearCredentials: (host) => ipcRenderer.invoke('creds:clear', host),
   listCredentials: () => ipcRenderer.invoke('creds:list'),
   getProfile: () => ipcRenderer.invoke('profile:get'),
+  version: () => ipcRenderer.invoke('app:version'),
   setProfile: (name, email) => ipcRenderer.invoke('profile:set', name, email),
   onRepoChanged: (cb) => {
     const listener = (_e: unknown, path: string): void => cb(path)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useRepo } from '../store'
+import logo from '../assets/logo.svg'
 
 function IdentitySection(): React.JSX.Element {
   const { profile, loadProfile } = useRepo()
@@ -127,6 +128,36 @@ function CredentialsSection(): React.JSX.Element {
   )
 }
 
+function AboutSection(): React.JSX.Element {
+  const [version, setVersion] = useState('')
+  useEffect(() => {
+    void window.api.version().then(setVersion)
+  }, [])
+
+  return (
+    <section className="profile-section about-section">
+      <div className="about-row">
+        <img className="about-logo" src={logo} alt="GitScylla" />
+        <div className="about-text">
+          <div className="about-name">
+            GitScylla <span className="about-ver">v{version}</span>
+          </div>
+          <div className="about-tag">A git client with teeth</div>
+        </div>
+      </div>
+      <a
+        className="about-link"
+        href="https://github.com/westplainsdev/GitScylla"
+        target="_blank"
+        rel="noreferrer"
+      >
+        github.com/westplainsdev/GitScylla
+      </a>
+      <div className="about-license">MIT License</div>
+    </section>
+  )
+}
+
 export default function ProfileSidebar(): React.JSX.Element | null {
   const { profileOpen, toggleProfile } = useRepo()
   if (!profileOpen) return null
@@ -143,6 +174,7 @@ export default function ProfileSidebar(): React.JSX.Element | null {
         </div>
         <IdentitySection />
         <CredentialsSection />
+        <AboutSection />
       </aside>
     </>
   )
