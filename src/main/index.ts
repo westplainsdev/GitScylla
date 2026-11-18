@@ -1,28 +1,47 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
-import { watch, type FSWatcher } from 'fs'
+import { watch, readFileSync, writeFileSync, type FSWatcher } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
 import { simpleGit } from 'simple-git'
+import icon from '../../resources/icon.png?asset'
 import { GitService } from './git-service'
 import { CredentialStore } from './credentials'
+import type { Session } from '../shared/types'
 
-let git: GitService
 let creds: CredentialStore
-let watcher: FSWatcher | null = null
-let watchTimer: NodeJS.Timeout | null = null
+const repos = new Map<string, GitService>()
+const watchers = new Map<string, FSWatcher>()
+const watchTimers = new Map<string, NodeJS.Timeout>()
 
-function watchRepo(win: BrowserWindow): void {
-  watcher?.close()
-  watcher = null
-  if (!git?.repoPath) return
-  watcher = watch(git.repoPath, { recursive: true }, () => {
-    if (watchTimer) clearTimeout(watchTimer)
-    watchTimer = setTimeout(() => {
-      if (!win.isDestroyed()) win.webContents.send('repo:changed')
-    }, 400)
+function svc(repo: string): GitService {
+  const s = repos.get(repo)
+  if (!s) throw new Error(`Repository not open: ${repo}`)
+  return s
+}
+
+function watchRepo(win: BrowserWindow, path: string): void {
+  if (watchers.has(path)) return
+  const w = watch(path, { recursive: true }, () => {
+    const t = watchTimers.get(path)
+    if (t) clearTimeout(t)
+    watchTimers.set(
+      path,
+      setTimeout(() => {
+        if (!win.isDestroyed()) win.webContents.send('repo:changed', path)
+      }, 400)
+    )
   })
-  watcher.on('error', () => {})
+  w.on('error', () => {})
+  watchers.set(path, w)
+}
+
+function unwatchRepo(path: string): void {
+  watchers.get(path)?.close()
+  watchers.delete(path)
+}
+
+function sessionFile(): string {
+  return join(app.getPath('userData'), 'session.json')
 }
 
 function registerIpc(win: BrowserWindow): void {
@@ -34,55 +53,86 @@ function registerIpc(win: BrowserWindow): void {
     return r.canceled ? null : r.filePaths[0]
   })
 
-  const afterMutation = (): void => watchRepo(win)
-
   ipcMain.handle('git:open', async (_e, path: string) => {
-    const info = await git.open(path)
-    afterMutation()
+    let g = repos.get(path)
+    if (!g) {
+      g = new GitService(creds)
+      repos.set(path, g)
+    }
+    const info = await g.open(path)
+    // the returned path is canonical (repo toplevel) — key the map by it
+    if (info.path !== path) {
+      repos.delete(path)
+      repos.set(info.path, g)
+    }
+    watchRepo(win, info.path)
     return info
   })
+  ipcMain.handle('git:close', (_e, path: string) => {
+    repos.delete(path)
+    unwatchRepo(path)
+  })
   ipcMain.handle('git:init', async (_e, path: string) => {
-    const info = await git.init(path)
-    afterMutation()
+    const g = new GitService(creds)
+    const info = await g.init(path)
+    repos.set(info.path, g)
+    watchRepo(win, info.path)
     return info
   })
   ipcMain.handle('git:clone', async (_e, url: string, dir: string) => {
-    const info = await git.clone(url, dir)
-    afterMutation()
+    const g = new GitService(creds)
+    const info = await g.clone(url, dir)
+    repos.set(info.path, g)
+    watchRepo(win, info.path)
     return info
   })
 
-  ipcMain.handle('git:status', () => git.status())
-  ipcMain.handle('git:log', (_e, limit?: number) => git.log(limit))
-  ipcMain.handle('git:branches', () => git.branches())
-  ipcMain.handle('git:checkout', (_e, name: string) => git.checkout(name))
-  ipcMain.handle('git:create-branch', (_e, name: string) => git.createBranch(name))
-  ipcMain.handle('git:stage', (_e, paths: string[]) => git.stage(paths))
-  ipcMain.handle('git:unstage', (_e, paths: string[]) => git.unstage(paths))
-  ipcMain.handle('git:commit', (_e, msg: string) => git.commit(msg))
-  ipcMain.handle('git:file-diff', (_e, path: string, staged: boolean) =>
-    git.fileDiff(path, staged)
+  ipcMain.handle('git:status', (_e, r: string) => svc(r).status())
+  ipcMain.handle('git:log', (_e, r: string, limit?: number) => svc(r).log(limit))
+  ipcMain.handle('git:branches', (_e, r: string) => svc(r).branches())
+  ipcMain.handle('git:checkout', (_e, r: string, name: string) => svc(r).checkout(name))
+  ipcMain.handle('git:create-branch', (_e, r: string, name: string) =>
+    svc(r).createBranch(name)
   )
-  ipcMain.handle('git:commit-files', (_e, hash: string, parent: string | null) =>
-    git.commitFiles(hash, parent)
+  ipcMain.handle('git:stage', (_e, r: string, paths: string[]) => svc(r).stage(paths))
+  ipcMain.handle('git:unstage', (_e, r: string, paths: string[]) => svc(r).unstage(paths))
+  ipcMain.handle('git:commit', (_e, r: string, msg: string) => svc(r).commit(msg))
+  ipcMain.handle('git:file-diff', (_e, r: string, path: string, staged: boolean) =>
+    svc(r).fileDiff(path, staged)
   )
-  ipcMain.handle('git:commit-file-diff', (_e, hash: string, parent: string | null, path: string) =>
-    git.commitFileDiff(hash, parent, path)
+  ipcMain.handle('git:commit-files', (_e, r: string, hash: string, parent: string | null) =>
+    svc(r).commitFiles(hash, parent)
   )
-  ipcMain.handle('git:fetch', () => git.fetch())
-  ipcMain.handle('git:pull', () => git.pull())
-  ipcMain.handle('git:push', () => git.push())
-  ipcMain.handle('git:merge', (_e, name: string) => git.mergeBranch(name))
-  ipcMain.handle('git:abort-op', () => git.abortOperation())
-  ipcMain.handle('git:resolve-side', (_e, path: string, side: 'ours' | 'theirs') =>
-    git.resolveSide(path, side)
+  ipcMain.handle(
+    'git:commit-file-diff',
+    (_e, r: string, hash: string, parent: string | null, path: string) =>
+      svc(r).commitFileDiff(hash, parent, path)
   )
-  ipcMain.handle('git:stash', (_e, message?: string) => git.stash(message))
-  ipcMain.handle('git:stash-list', () => git.stashList())
-  ipcMain.handle('git:stash-apply', (_e, i: number) => git.stashApply(i))
-  ipcMain.handle('git:stash-pop', (_e, i: number) => git.stashPop(i))
-  ipcMain.handle('git:stash-drop', (_e, i: number) => git.stashDrop(i))
-  ipcMain.handle('git:stash-show', (_e, i: number) => git.stashShow(i))
+  ipcMain.handle('git:merge', (_e, r: string, name: string) => svc(r).mergeBranch(name))
+  ipcMain.handle('git:abort-op', (_e, r: string) => svc(r).abortOperation())
+  ipcMain.handle('git:resolve-side', (_e, r: string, path: string, side: 'ours' | 'theirs') =>
+    svc(r).resolveSide(path, side)
+  )
+  ipcMain.handle('git:stash', (_e, r: string, message?: string) => svc(r).stash(message))
+  ipcMain.handle('git:stash-list', (_e, r: string) => svc(r).stashList())
+  ipcMain.handle('git:stash-apply', (_e, r: string, i: number) => svc(r).stashApply(i))
+  ipcMain.handle('git:stash-pop', (_e, r: string, i: number) => svc(r).stashPop(i))
+  ipcMain.handle('git:stash-drop', (_e, r: string, i: number) => svc(r).stashDrop(i))
+  ipcMain.handle('git:stash-show', (_e, r: string, i: number) => svc(r).stashShow(i))
+  ipcMain.handle('git:fetch', (_e, r: string) => svc(r).fetch())
+  ipcMain.handle('git:pull', (_e, r: string) => svc(r).pull())
+  ipcMain.handle('git:push', (_e, r: string) => svc(r).push())
+
+  ipcMain.handle('session:load', () => {
+    try {
+      return JSON.parse(readFileSync(sessionFile(), 'utf8')) as Session
+    } catch {
+      return { open: [], active: null }
+    }
+  })
+  ipcMain.handle('session:save', (_e, s: Session) => {
+    writeFileSync(sessionFile(), JSON.stringify(s))
+  })
 
   ipcMain.handle('creds:save', (_e, host: string, username: string, secret: string) =>
     creds.save(host, username, secret)
@@ -141,7 +191,6 @@ function createWindow(): void {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.gitclient')
   creds = new CredentialStore()
-  git = new GitService(creds)
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

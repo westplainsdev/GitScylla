@@ -12,12 +12,12 @@ export default function BranchList(): React.JSX.Element {
 
   const checkout = (branch: string): void => {
     if (branch === status?.current) return
-    void run('checkout', () => window.api.checkout(branch))
+    void run('checkout', (r) => window.api.checkout(r, branch))
   }
 
   const create = (): void => {
     const n = name.trim()
-    if (n) void run('branch', () => window.api.createBranch(n))
+    if (n) void run('branch', (r) => window.api.createBranch(r, n))
     setCreating(false)
     setName('')
   }
@@ -70,7 +70,7 @@ export default function BranchList(): React.JSX.Element {
                   title={`Merge ${b.name} into ${status?.current ?? 'current'}`}
                   onClick={(e) => {
                     e.stopPropagation()
-                    void run('merge', () => window.api.mergeBranch(b.name))
+                    void run('merge', (r) => window.api.mergeBranch(r, b.name))
                   }}
                 >
                   merge

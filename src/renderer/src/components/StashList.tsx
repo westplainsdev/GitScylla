@@ -12,7 +12,7 @@ export default function StashList(): React.JSX.Element {
     status.files.length + status.staged.length + status.modified.length > 0
 
   const save = (): void => {
-    void run('stash', () => window.api.stash(msg.trim() || undefined))
+    void run('stash', (r) => window.api.stash(r, msg.trim() || undefined))
     setStashing(false)
     setMsg('')
   }
@@ -73,7 +73,7 @@ export default function StashList(): React.JSX.Element {
                   title="Apply and remove from stash"
                   onClick={(e) => {
                     e.stopPropagation()
-                    void run('stash pop', () => window.api.stashPop(s.index))
+                    void run('stash pop', (r) => window.api.stashPop(r, s.index))
                   }}
                 >
                   pop
@@ -83,7 +83,7 @@ export default function StashList(): React.JSX.Element {
                   title="Apply, keep in stash"
                   onClick={(e) => {
                     e.stopPropagation()
-                    void run('stash apply', () => window.api.stashApply(s.index))
+                    void run('stash apply', (r) => window.api.stashApply(r, s.index))
                   }}
                 >
                   apply
@@ -93,7 +93,7 @@ export default function StashList(): React.JSX.Element {
                   title="Drop stash"
                   onClick={(e) => {
                     e.stopPropagation()
-                    void run('stash drop', () => window.api.stashDrop(s.index))
+                    void run('stash drop', (r) => window.api.stashDrop(r, s.index))
                   }}
                 >
                   drop

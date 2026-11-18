@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useRepo } from './store'
 import Welcome from './components/Welcome'
 import TopBar from './components/TopBar'
+import TabBar from './components/TabBar'
 import ChangesPane from './components/ChangesPane'
 import CommitGraph from './components/CommitGraph'
 import AuthDialog from './components/AuthDialog'
@@ -9,13 +10,23 @@ import ProfileSidebar from './components/ProfileSidebar'
 import DiffDrawer from './components/DiffDrawer'
 
 export default function App(): React.JSX.Element {
-  const { repo, commits, selectedCommit, commitFileList, error, refresh, setError, openDiff } =
-    useRepo()
+  const {
+    repo,
+    commits,
+    selectedCommit,
+    commitFileList,
+    error,
+    setError,
+    openDiff,
+    boot,
+    handleFsChange
+  } = useRepo()
 
   useEffect(() => {
-    if (!repo) return
-    return window.api.onRepoChanged(() => void refresh())
-  }, [repo, refresh])
+    void boot()
+    return window.api.onRepoChanged(handleFsChange)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (!repo) {
     return (
@@ -30,6 +41,7 @@ export default function App(): React.JSX.Element {
   return (
     <div className="app">
       <TopBar />
+      <TabBar />
       {error && (
         <div className="error-bar" onClick={() => setError(null)}>
           {error}

@@ -130,12 +130,12 @@ export default function ChangesPane(): React.JSX.Element {
   const view = (r: Row): void => void openDiff({ path: r.path, staged: r.kind === 'staged' })
 
   const resolve = (r: Row, side: 'ours' | 'theirs'): void =>
-    void run('resolving', () => window.api.resolveSide(r.path, side))
+    void run('resolving', (repo) => window.api.resolveSide(repo, r.path, side))
 
-  const stage = (paths: string[]): void => void run('staging', () => window.api.stage(paths))
-  const unstage = (paths: string[]): void => void run('unstaging', () => window.api.unstage(paths))
+  const stage = (paths: string[]): void => void run('staging', (repo) => window.api.stage(repo, paths))
+  const unstage = (paths: string[]): void => void run('unstaging', (repo) => window.api.unstage(repo, paths))
   const commit = async (): Promise<void> => {
-    const r = await run('committing', () => window.api.commit(message))
+    const r = await run('committing', (repo) => window.api.commit(repo, message))
     if (r !== undefined) setMessage('')
   }
 
@@ -156,7 +156,7 @@ export default function ChangesPane(): React.JSX.Element {
                 : 'No conflicts — commit to finish'}
             </span>
           </div>
-          <button className="mini danger" onClick={() => run('abort', () => window.api.abortOperation())}>
+          <button className="mini danger" onClick={() => run('abort', (repo) => window.api.abortOperation(repo))}>
             Abort
           </button>
         </div>

@@ -8,7 +8,7 @@ export default function TopBar(): React.JSX.Element {
 
   const local = branches.filter((b) => !b.remote)
 
-  const act = (label: string, fn: () => Promise<unknown>): void => {
+  const act = (label: string, fn: (repo: string) => Promise<unknown>): void => {
     void run(label, fn)
   }
 
@@ -27,7 +27,7 @@ export default function TopBar(): React.JSX.Element {
             <select
               className="branch-select"
               value={status?.current ?? ''}
-              onChange={(e) => act('checkout', () => window.api.checkout(e.target.value))}
+              onChange={(e) => act('checkout', (r) => window.api.checkout(r, e.target.value))}
             >
               {status?.current === null && <option value="">(detached HEAD)</option>}
               {local.map((b) => (
@@ -46,7 +46,7 @@ export default function TopBar(): React.JSX.Element {
             onSubmit={(e) => {
               e.preventDefault()
               if (branchName.trim()) {
-                act('branch', () => window.api.createBranch(branchName.trim()))
+                act('branch', (r) => window.api.createBranch(r, branchName.trim()))
               }
               setNewBranch(null)
               setBranchName('')
@@ -71,9 +71,9 @@ export default function TopBar(): React.JSX.Element {
 
       <div className="actions">
         {busy && <span className="busy">{busy}…</span>}
-        <button onClick={() => act('fetch', () => window.api.fetch())}>Fetch</button>
-        <button onClick={() => act('pull', () => window.api.pull())}>Pull</button>
-        <button onClick={() => act('push', () => window.api.push())}>Push</button>
+        <button onClick={() => act('fetch', (r) => window.api.fetch(r))}>Fetch</button>
+        <button onClick={() => act('pull', (r) => window.api.pull(r))}>Pull</button>
+        <button onClick={() => act('push', (r) => window.api.push(r))}>Push</button>
         <button title="Refresh" onClick={() => void refresh()}>
           ⟳
         </button>

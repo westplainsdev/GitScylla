@@ -74,9 +74,11 @@ export class GitService {
     if (!(await git.checkIsRepo())) {
       throw new Error(`${path} is not a git repository`)
     }
-    this.git = git
-    this.repoPath = path
-    return { path, name: basename(path) }
+    // canonicalize to the repo toplevel so subdirs map to the same service/tab
+    const top = (await git.revparse(['--show-toplevel'])).trim()
+    this.git = simpleGit(top, GIT_OPTS)
+    this.repoPath = top
+    return { path: top, name: basename(top) }
   }
 
   async init(path: string): Promise<RepoInfo> {
