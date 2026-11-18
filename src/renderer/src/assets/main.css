@@ -324,6 +324,10 @@ code {
   background: var(--bg-3);
 }
 
+.file-row.viewing {
+  background: rgba(88, 166, 255, 0.12);
+}
+
 .file-row .mini {
   visibility: hidden;
   margin-left: auto;
@@ -505,6 +509,137 @@ code {
 .detail-meta {
   color: var(--fg-dim);
   margin-left: auto;
+  flex-shrink: 0;
+}
+
+.detail-files {
+  display: flex;
+  gap: 4px;
+  margin-left: 12px;
+  overflow-x: auto;
+  max-width: 45%;
+}
+
+.detail-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  font-size: 11px;
+  white-space: nowrap;
+  border-radius: 4px;
+}
+
+/* ---------- Diff drawer ---------- */
+
+.diff-drawer {
+  position: fixed;
+  top: 49px;
+  right: 0;
+  bottom: 0;
+  width: 58%;
+  min-width: 480px;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+}
+
+.diff-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.diff-title {
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-body {
+  flex: 1;
+  overflow: auto;
+  user-select: text;
+}
+
+.diff-empty {
+  color: var(--fg-dim);
+  padding: 40px;
+  text-align: center;
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.diff-table td {
+  padding: 0 8px;
+  vertical-align: top;
+  white-space: pre;
+}
+
+.dl-no {
+  width: 1%;
+  min-width: 38px;
+  text-align: right;
+  color: var(--fg-dim);
+  opacity: 0.6;
+  border-right: 1px solid var(--border);
+  padding-right: 6px !important;
+  user-select: none;
+}
+
+.dl-mark {
+  width: 1%;
+  text-align: center;
+  color: var(--fg-dim);
+  user-select: none;
+}
+
+.dl-code {
+  width: 98%;
+}
+
+tr.dl-add td {
+  background: rgba(63, 185, 80, 0.13);
+}
+
+tr.dl-add .dl-code,
+tr.dl-add .dl-mark {
+  color: #7ee787;
+}
+
+tr.dl-del td {
+  background: rgba(248, 81, 73, 0.12);
+}
+
+tr.dl-del .dl-code,
+tr.dl-del .dl-mark {
+  color: #ffa198;
+}
+
+tr.dl-hunk td {
+  background: rgba(88, 166, 255, 0.08);
+  color: var(--accent);
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+tr.dl-binary td {
+  color: var(--fg-dim);
+  padding: 24px;
+  text-align: center;
 }
 
 /* ---------- Modal ---------- */

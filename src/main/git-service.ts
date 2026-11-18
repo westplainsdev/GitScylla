@@ -1,7 +1,7 @@
 import { simpleGit, SimpleGit } from 'simple-git'
 import { basename, join } from 'path'
-import { existsSync, mkdirSync } from 'fs'
-import type { BranchInfo, CommitInfo, RepoInfo, RepoStatus } from '../shared/types'
+import { existsSync, mkdirSync, readFileSync } from 'fs'
+import type { BranchInfo, CommitInfo, FileStatus, RepoInfo, RepoStatus } from '../shared/types'
 import { CredentialStore, hostOf, isAuthError } from './credentials'
 
 const FIELD = '\x1f'
@@ -36,7 +36,8 @@ export class GitService {
 
   private async remoteHost(): Promise<string | null> {
     try {
-      const url = (await this.require().remote(['get-url', 'origin']))?.trim()
+      const res = await this.require().remote(['get-url', 'origin'])
+      const url = typeof res === 'string' ? res.trim() : ''
       return url ? hostOf(url) : null
     } catch {
       return null
@@ -191,5 +192,60 @@ export class GitService {
         ? g.push(['--set-upstream', 'origin', s.current])
         : g.push()
     )
+  }
+
+  /** unified diff for a working-tree file; staged diffs are index-vs-HEAD */
+  async fileDiff(path: string, staged: boolean): Promise<string> {
+    const git = this.require()
+    if (staged) return git.diff(['--cached', '--', path])
+
+    const s = await git.status()
+    if (s.not_added.includes(path)) return this.untrackedDiff(path)
+    return git.diff(['--', path])
+  }
+
+  /** synthesizes a unified diff that adds every line of a new (untracked) file */
+  private untrackedDiff(path: string): string {
+    const abs = join(this.repoPath!, path)
+    const buf = readFileSync(abs)
+    if (buf.subarray(0, 8192).includes(0)) {
+      return `diff --git a/${path} b/${path}\nBinary file ${path}`
+    }
+    const lines = buf.toString('utf8').split('\n')
+    if (lines.at(-1) === '') lines.pop()
+    const body = lines.map((l) => `+${l}`).join('\n')
+    return [
+      `diff --git a/${path} b/${path}`,
+      'new file mode 100644',
+      '--- /dev/null',
+      `+++ b/${path}`,
+      `@@ -0,0 +1,${lines.length} @@`,
+      body
+    ].join('\n')
+  }
+
+  /** name-status list of files changed by a commit (vs first parent) */
+  async commitFiles(hash: string, parentHash: string | null): Promise<FileStatus[]> {
+    const git = this.require()
+    const args = parentHash
+      ? ['diff', '--name-status', parentHash, hash]
+      : ['show', '--format=', '--name-status', hash]
+    const out = await git.raw(args)
+    return out
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const [code, ...paths] = line.split('\t')
+        const path = paths[paths.length - 1] // renames: take new path
+        return { path, index: code[0], workingDir: ' ' }
+      })
+  }
+
+  /** unified diff of one file within a commit, vs its first parent */
+  async commitFileDiff(hash: string, parentHash: string | null, path: string): Promise<string> {
+    const git = this.require()
+    return parentHash
+      ? git.diff([parentHash, hash, '--', path])
+      : git.raw(['show', '--format=', hash, '--', path])
   }
 }

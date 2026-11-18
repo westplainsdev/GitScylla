@@ -22,13 +22,17 @@ function Section({
   rows,
   action,
   actionTitle,
-  onAction
+  onAction,
+  onView,
+  viewing
 }: {
   title: string
   rows: Row[]
   action: string
   actionTitle: string
   onAction: (paths: string[]) => void
+  onView: (r: Row) => void
+  viewing: string | null
 }): React.JSX.Element | null {
   if (rows.length === 0) return null
   return (
@@ -42,10 +46,21 @@ function Section({
         </button>
       </div>
       {rows.map((r) => (
-        <div key={r.kind + r.path} className="file-row" title={`${r.path} — ${CODE_LABEL[r.code] ?? r.code}`}>
+        <div
+          key={r.kind + r.path}
+          className={`file-row${viewing === r.path ? ' viewing' : ''}`}
+          title={`${r.path} — ${CODE_LABEL[r.code] ?? r.code}`}
+          onClick={() => onView(r)}
+        >
           <span className={`code code-${r.code === '?' ? 'A' : r.code}`}>{r.code === ' ' ? 'M' : r.code}</span>
           <span className="file-path">{r.path}</span>
-          <button className="mini" onClick={() => onAction([r.path])}>
+          <button
+            className="mini"
+            onClick={(e) => {
+              e.stopPropagation()
+              onAction([r.path])
+            }}
+          >
             {action}
           </button>
         </div>
@@ -55,7 +70,7 @@ function Section({
 }
 
 export default function ChangesPane(): React.JSX.Element {
-  const { status, busy, run } = useRepo()
+  const { status, busy, run, diffView, openDiff } = useRepo()
   const [message, setMessage] = useState('')
 
   if (!status) return <aside className="changes" />
@@ -82,6 +97,9 @@ export default function ChangesPane(): React.JSX.Element {
     }
   }
 
+  const viewingPath = diffView && !diffView.hash ? diffView.path : null
+  const view = (r: Row): void => void openDiff({ path: r.path, staged: r.kind === 'staged' })
+
   const stage = (paths: string[]): void => void run('staging', () => window.api.stage(paths))
   const unstage = (paths: string[]): void => void run('unstaging', () => window.api.unstage(paths))
   const commit = async (): Promise<void> => {
@@ -96,10 +114,10 @@ export default function ChangesPane(): React.JSX.Element {
       <div className="changes-head">Changes</div>
       <div className="changes-scroll">
         {clean && <div className="clean">Working tree clean</div>}
-        <Section title="Conflicted" rows={conflicted} action="stage" actionTitle="Mark resolved" onAction={stage} />
-        <Section title="Staged" rows={staged} action="−" actionTitle="Unstage" onAction={unstage} />
-        <Section title="Unstaged" rows={unstaged} action="+" actionTitle="Stage" onAction={stage} />
-        <Section title="Untracked" rows={untracked} action="+" actionTitle="Stage" onAction={stage} />
+        <Section title="Conflicted" rows={conflicted} action="stage" actionTitle="Mark resolved" onAction={stage} onView={view} viewing={viewingPath} />
+        <Section title="Staged" rows={staged} action="−" actionTitle="Unstage" onAction={unstage} onView={view} viewing={viewingPath} />
+        <Section title="Unstaged" rows={unstaged} action="+" actionTitle="Stage" onAction={stage} onView={view} viewing={viewingPath} />
+        <Section title="Untracked" rows={untracked} action="+" actionTitle="Stage" onAction={stage} onView={view} viewing={viewingPath} />
       </div>
       <div className="commit-box">
         <textarea

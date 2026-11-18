@@ -65,6 +65,12 @@ export interface GitApi {
   stage(paths: string[]): Promise<void>
   unstage(paths: string[]): Promise<void>
   commit(message: string): Promise<void>
+  /** unified diff text for a working-tree file */
+  fileDiff(path: string, staged: boolean): Promise<string>
+  /** files changed by a commit (diffed against first parent; null parent = root commit) */
+  commitFiles(hash: string, parentHash: string | null): Promise<FileStatus[]>
+  /** unified diff of one file inside a commit */
+  commitFileDiff(hash: string, parentHash: string | null, path: string): Promise<string>
   fetch(): Promise<void>
   pull(): Promise<void>
   push(): Promise<void>

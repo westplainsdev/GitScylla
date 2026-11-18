@@ -15,6 +15,10 @@ const api: GitApi = {
   stage: (paths) => ipcRenderer.invoke('git:stage', paths),
   unstage: (paths) => ipcRenderer.invoke('git:unstage', paths),
   commit: (msg) => ipcRenderer.invoke('git:commit', msg),
+  fileDiff: (path, staged) => ipcRenderer.invoke('git:file-diff', path, staged),
+  commitFiles: (hash, parent) => ipcRenderer.invoke('git:commit-files', hash, parent),
+  commitFileDiff: (hash, parent, path) =>
+    ipcRenderer.invoke('git:commit-file-diff', hash, parent, path),
   fetch: () => ipcRenderer.invoke('git:fetch'),
   pull: () => ipcRenderer.invoke('git:pull'),
   push: () => ipcRenderer.invoke('git:push'),
@@ -31,7 +35,9 @@ const api: GitApi = {
   }
 }
 
-if (process.contextIsolated) {
+const contextIsolated = (process as unknown as { contextIsolated: boolean }).contextIsolated
+
+if (contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)

@@ -3,6 +3,7 @@ import type {
   BranchInfo,
   CommitInfo,
   CredentialEntry,
+  FileStatus,
   GitProfile,
   RepoInfo,
   RepoStatus
@@ -11,6 +12,15 @@ import type {
 interface AuthRequest {
   host: string
   retry: () => void
+}
+
+export interface DiffTarget {
+  path: string
+  /** working-tree view: index-vs-HEAD when true */
+  staged: boolean
+  /** set when viewing a file inside a commit instead of the working tree */
+  hash?: string
+  parent?: string | null
 }
 
 interface RepoState {
@@ -25,12 +35,18 @@ interface RepoState {
   profileOpen: boolean
   credentials: CredentialEntry[]
   profile: GitProfile | null
+  diffView: DiffTarget | null
+  diffText: string | null
+  diffLoading: boolean
+  commitFileList: FileStatus[]
 
   setError(e: string | null): void
   setAuthRequest(r: AuthRequest | null): void
   toggleProfile(): void
   loadCredentials(): Promise<void>
   loadProfile(): Promise<void>
+  openDiff(t: DiffTarget): Promise<void>
+  closeDiff(): void
   open(path: string): Promise<void>
   clone(url: string, dir: string): Promise<void>
   init(path: string): Promise<void>
@@ -71,6 +87,25 @@ export const useRepo = create<RepoState>((set, get) => ({
   loadProfile: async () => {
     set({ profile: await window.api.getProfile() })
   },
+
+  diffView: null,
+  diffText: null,
+  diffLoading: false,
+  commitFileList: [],
+
+  openDiff: async (t) => {
+    set({ diffView: t, diffLoading: true })
+    try {
+      const text = t.hash
+        ? await window.api.commitFileDiff(t.hash, t.parent ?? null, t.path)
+        : await window.api.fileDiff(t.path, t.staged)
+      set({ diffText: text, diffLoading: false })
+    } catch (e) {
+      set({ error: msg(e), diffLoading: false })
+    }
+  },
+
+  closeDiff: () => set({ diffView: null, diffText: null }),
 
   open: async (path) => {
     try {
@@ -121,9 +156,28 @@ export const useRepo = create<RepoState>((set, get) => ({
       window.api.branches()
     ])
     set({ status, commits, branches })
+    // keep an open working-tree diff in sync with disk changes
+    const dv = get().diffView
+    if (dv && !dv.hash) {
+      try {
+        set({ diffText: await window.api.fileDiff(dv.path, dv.staged) })
+      } catch {
+        set({ diffText: null })
+      }
+    }
   },
 
-  select: (c) => set({ selectedCommit: c }),
+  select: async (c) => {
+    set({ selectedCommit: c, commitFileList: [] })
+    if (c) {
+      try {
+        const parent = c.parents[0] ?? null
+        set({ commitFileList: await window.api.commitFiles(c.hash, parent) })
+      } catch {
+        set({ commitFileList: [] })
+      }
+    }
+  },
 
   run: async (label, fn) => {
     set({ busy: label, error: null })

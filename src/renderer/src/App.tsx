@@ -6,9 +6,11 @@ import ChangesPane from './components/ChangesPane'
 import CommitGraph from './components/CommitGraph'
 import AuthDialog from './components/AuthDialog'
 import ProfileSidebar from './components/ProfileSidebar'
+import DiffDrawer from './components/DiffDrawer'
 
 export default function App(): React.JSX.Element {
-  const { repo, commits, selectedCommit, error, refresh, setError } = useRepo()
+  const { repo, commits, selectedCommit, commitFileList, error, refresh, setError, openDiff } =
+    useRepo()
 
   useEffect(() => {
     if (!repo) return
@@ -46,12 +48,35 @@ export default function App(): React.JSX.Element {
                 {selectedCommit.author} &lt;{selectedCommit.email}&gt; ·{' '}
                 {new Date(selectedCommit.date * 1000).toLocaleString()}
               </span>
+              {commitFileList.length > 0 && (
+                <div className="detail-files">
+                  {commitFileList.map((f) => (
+                    <button
+                      key={f.path}
+                      className="detail-file"
+                      title={`${f.path} (${f.index})`}
+                      onClick={() =>
+                        void openDiff({
+                          path: f.path,
+                          staged: false,
+                          hash: selectedCommit.hash,
+                          parent: selectedCommit.parents[0] ?? null
+                        })
+                      }
+                    >
+                      <span className={`code code-${f.index}`}>{f.index}</span>
+                      {f.path}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
       <AuthDialog />
       <ProfileSidebar />
+      <DiffDrawer />
     </div>
   )
 }

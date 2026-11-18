@@ -60,6 +60,15 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('git:stage', (_e, paths: string[]) => git.stage(paths))
   ipcMain.handle('git:unstage', (_e, paths: string[]) => git.unstage(paths))
   ipcMain.handle('git:commit', (_e, msg: string) => git.commit(msg))
+  ipcMain.handle('git:file-diff', (_e, path: string, staged: boolean) =>
+    git.fileDiff(path, staged)
+  )
+  ipcMain.handle('git:commit-files', (_e, hash: string, parent: string | null) =>
+    git.commitFiles(hash, parent)
+  )
+  ipcMain.handle('git:commit-file-diff', (_e, hash: string, parent: string | null, path: string) =>
+    git.commitFileDiff(hash, parent, path)
+  )
   ipcMain.handle('git:fetch', () => git.fetch())
   ipcMain.handle('git:pull', () => git.pull())
   ipcMain.handle('git:push', () => git.push())
