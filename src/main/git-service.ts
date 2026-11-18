@@ -22,8 +22,12 @@ function isConflict(e: unknown): boolean {
 }
 
 /** simple-git guards these env vars by default; our askpass flow needs them */
+const PASSTHROUGH_ENV = [
+  'HOME', 'PATH', 'USER', 'LANG', 'LC_ALL', 'TMPDIR', 'TEMP', 'TMP',
+  'XDG_CONFIG_HOME', 'SSH_AUTH_SOCK', 'SSH_ASKPASS', 'GIT_SSH', 'GIT_SSH_COMMAND'
+]
 const GIT_OPTS = {
-  allowEnvironment: ['GIT_ASKPASS', 'GIT_TERMINAL_PROMPT', 'GIT_CLIENT_USER', 'GIT_CLIENT_PASS']
+  allowEnvironment: [...PASSTHROUGH_ENV, 'GIT_ASKPASS', 'GIT_TERMINAL_PROMPT', 'GIT_CLIENT_USER', 'GIT_CLIENT_PASS']
 }
 
 export class GitService {
@@ -40,7 +44,14 @@ export class GitService {
   /** routes git's credential prompts through our askpass script when we have creds for host */
   private applyAuthEnv(git: SimpleGit, host: string | null): void {
     const c = host ? this.creds.get(host) : undefined
+    // .env() replaces the child env entirely, so forward what git needs
+    const env: Record<string, string> = {}
+    for (const key of PASSTHROUGH_ENV) {
+      const v = process.env[key]
+      if (v !== undefined) env[key] = v
+    }
     git.env({
+      ...env,
       GIT_TERMINAL_PROMPT: '0',
       GIT_ASKPASS: this.creds.askpassPath,
       GIT_CLIENT_USER: c?.username ?? '',
