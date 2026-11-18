@@ -69,7 +69,10 @@ export interface GitProfile {
 
 export interface Session {
   open: string[]
+  /** repo path of the active tab, or null when the Home tab is active */
   active: string | null
+  /** most-recently-opened repo paths, front = most recent */
+  recent?: string[]
 }
 
 /**

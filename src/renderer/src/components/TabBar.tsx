@@ -1,10 +1,17 @@
 import { useRepo } from '../store'
 
 export default function TabBar(): React.JSX.Element {
-  const { tabs, activePath, activateTab, closeTab, open } = useRepo()
+  const { tabs, activePath, activateTab, activateHome, closeTab, open } = useRepo()
 
   return (
     <div className="tabbar">
+      <div
+        className={`tab home-tab${activePath === null ? ' active' : ''}`}
+        title="Home"
+        onClick={() => activePath !== null && activateHome()}
+      >
+        <span className="tab-name">⌂ Home</span>
+      </div>
       {tabs.map((t) => (
         <div
           key={t.path}

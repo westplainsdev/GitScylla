@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useRepo } from '../store'
+import logo from '../assets/logo.svg'
 
 type Mode = 'none' | 'clone' | 'init'
 
 export default function Welcome(): React.JSX.Element {
-  const { open, clone, init, error, busy, toggleProfile } = useRepo()
+  const { open, openTab, clone, init, error, busy, toggleProfile, recent, tabs } = useRepo()
   const [mode, setMode] = useState<Mode>('none')
   const [url, setUrl] = useState('')
   const [dir, setDir] = useState('')
@@ -16,8 +17,8 @@ export default function Welcome(): React.JSX.Element {
 
   return (
     <div className="welcome">
-      <h1>Git Client</h1>
-      <p className="tagline">Open a repository to get started</p>
+      <img className="welcome-logo" src={logo} alt="GitScylla" />
+      <p className="tagline">A git client with teeth</p>
 
       <div className="welcome-cards">
         <button
@@ -70,6 +71,28 @@ export default function Welcome(): React.JSX.Element {
             {busy === 'cloning' ? 'Cloning…' : 'Clone'}
           </button>
         </form>
+      )}
+
+      {recent.length > 0 && (
+        <div className="recent">
+          <h2>Recent repositories</h2>
+          <div className="recent-list">
+            {recent.map((r) => (
+              <button
+                key={r.path}
+                className="recent-row"
+                onClick={() => void openTab(r.path)}
+                title={r.path}
+              >
+                <span className="recent-name">{r.name}</span>
+                <span className="recent-path">{r.path}</span>
+                {tabs.some((t) => t.path === r.path) && (
+                  <span className="recent-open">open</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {error && <div className="error">{error}</div>}

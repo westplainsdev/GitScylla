@@ -32,12 +32,21 @@ export interface Tab extends RepoInfo {
   stale?: boolean
 }
 
+export interface RecentRepo {
+  path: string
+  name: string
+}
+
+const baseName = (p: string): string => p.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? p
+
 /** commit history page size — "Load more" fetches one page at a time */
 const LOG_PAGE = 300
 
 interface RepoState {
   tabs: Tab[]
   activePath: string | null
+  /** previously opened repos, most recent first — shown on the Home tab */
+  recent: RecentRepo[]
   repo: RepoInfo | null
   booted: boolean
 
@@ -73,6 +82,7 @@ interface RepoState {
   openTab(path: string): Promise<void>
   closeTab(path: string): Promise<void>
   activateTab(path: string): Promise<void>
+  activateHome(): void
   clone(url: string, dir: string): Promise<void>
   init(path: string): Promise<void>
   refresh(): Promise<void>
@@ -89,13 +99,23 @@ export const useRepo = create<RepoState>((set, get) => {
   const rp = (): string => get().repo!.path
 
   const saveSession = (): void => {
-    const { tabs, activePath } = get()
-    void window.api.saveSession({ open: tabs.map((t) => t.path), active: activePath })
+    const { tabs, activePath, recent } = get()
+    void window.api.saveSession({
+      open: tabs.map((t) => t.path),
+      active: activePath,
+      recent: recent.map((r) => r.path)
+    })
+  }
+
+  const bumpRecent = (path: string): void => {
+    const recent = [{ path, name: baseName(path) }, ...get().recent.filter((r) => r.path !== path)]
+    set({ recent: recent.slice(0, 25) })
   }
 
   return {
     tabs: [],
     activePath: null,
+    recent: [],
     repo: null,
     booted: false,
 
@@ -152,8 +172,14 @@ export const useRepo = create<RepoState>((set, get) => {
           // path moved or is no longer a repo — drop silently
         }
       }
-      set({ tabs: live })
-      const active = live.find((t) => t.path === session.active) ?? live[0]
+      set({
+        tabs: live,
+        recent: [...new Set([...(session.recent ?? []), ...session.open])].map((p) => ({
+          path: p,
+          name: baseName(p)
+        }))
+      })
+      const active = live.find((t) => t.path === session.active)
       if (active) await get().activateTab(active.path)
       else saveSession()
     },
@@ -168,9 +194,15 @@ export const useRepo = create<RepoState>((set, get) => {
         const info = await window.api.openRepo(path)
         const tabs = get().tabs.filter((t) => t.path !== info.path)
         tabs.push(info)
+        bumpRecent(info.path)
         set({ tabs, error: null })
         await get().activateTab(info.path)
       } catch (e) {
+        // dead path — drop it from recents too
+        if (get().recent.some((r) => r.path === path)) {
+          set({ recent: get().recent.filter((r) => r.path !== path) })
+          saveSession()
+        }
         set({ error: msg(e) })
       }
     },
@@ -219,12 +251,31 @@ export const useRepo = create<RepoState>((set, get) => {
       await get().refresh()
     },
 
+    activateHome: () => {
+      set({
+        activePath: null,
+        repo: null,
+        status: null,
+        commits: [],
+        hasMore: false,
+        branches: [],
+        remotes: [],
+        stashes: [],
+        commitFileList: [],
+        selectedCommit: null,
+        diffView: null,
+        diffText: null
+      })
+      saveSession()
+    },
+
     clone: async (url, dir) => {
       set({ busy: 'cloning', error: null })
       try {
         const info = await window.api.cloneRepo(url, dir)
         const tabs = get().tabs.filter((t) => t.path !== info.path)
         tabs.push(info)
+        bumpRecent(info.path)
         set({ tabs })
         await get().activateTab(info.path)
       } catch (e) {
@@ -244,6 +295,7 @@ export const useRepo = create<RepoState>((set, get) => {
         const info = await window.api.initRepo(path)
         const tabs = get().tabs.filter((t) => t.path !== info.path)
         tabs.push(info)
+        bumpRecent(info.path)
         set({ tabs })
         await get().activateTab(info.path)
       } catch (e) {

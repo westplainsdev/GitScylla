@@ -41,20 +41,9 @@ export default function App(): React.JSX.Element {
     return () => clearTimeout(t)
   }, [splashVisible])
 
-  if (!repo) {
-    return (
-      <>
-        <Welcome />
-        <AuthDialog />
-        <ProfileSidebar />
-        {!splashGone && <Splash fading={!splashVisible} />}
-      </>
-    )
-  }
-
   return (
     <div className="app">
-      <TopBar />
+      {repo && <TopBar />}
       <TabBar />
       {error && (
         <div className="error-bar" onClick={() => setError(null)}>
@@ -62,16 +51,20 @@ export default function App(): React.JSX.Element {
           <span className="dismiss">✕</span>
         </div>
       )}
-      <div className="body">
-        <ChangesPane />
-        <div className="main-pane">
-          <div className="graph-col">
-            <RemoteBanner />
-            <CommitGraph commits={commits} />
+      {repo ? (
+        <div className="body">
+          <ChangesPane />
+          <div className="main-pane">
+            <div className="graph-col">
+              <RemoteBanner />
+              <CommitGraph commits={commits} />
+            </div>
+            <CommitDetail />
           </div>
-          <CommitDetail />
         </div>
-      </div>
+      ) : (
+        <Welcome />
+      )}
       <AuthDialog />
       <ProfileSidebar />
       <DiffDrawer />
