@@ -16,12 +16,15 @@ export default function TopBar(): React.JSX.Element {
   return (
     <header className="topbar">
       <div className="repo-id">
-        <span className="repo-name">{repo?.name}</span>
-        <span className="repo-path" title={repo?.path}>
-          {repo?.path}
-        </span>
+        <span className="repo-name">{repo ? repo.name : 'GitScylla'}</span>
+        {repo && (
+          <span className="repo-path" title={repo.path}>
+            {repo.path}
+          </span>
+        )}
       </div>
 
+      {repo && (
       <div className="branch-box">
         {newBranch === null ? (
           <>
@@ -69,21 +72,26 @@ export default function TopBar(): React.JSX.Element {
           </span>
         )}
       </div>
+      )}
 
       <div className="actions">
         {busy && <span className="busy">{busy}…</span>}
-        <button disabled={remotes.length === 0} onClick={() => act('fetch', (r) => window.api.fetch(r))}>
-          Fetch
-        </button>
-        <button disabled={remotes.length === 0} onClick={() => act('pull', (r) => window.api.pull(r))}>
-          Pull
-        </button>
-        <button disabled={remotes.length === 0} onClick={() => act('push', (r) => window.api.push(r))}>
-          Push
-        </button>
-        <button title="Refresh" onClick={() => void refresh()}>
-          ⟳
-        </button>
+        {repo && (
+          <>
+            <button disabled={remotes.length === 0} onClick={() => act('fetch', (r) => window.api.fetch(r))}>
+              Fetch
+            </button>
+            <button disabled={remotes.length === 0} onClick={() => act('pull', (r) => window.api.pull(r))}>
+              Pull
+            </button>
+            <button disabled={remotes.length === 0} onClick={() => act('push', (r) => window.api.push(r))}>
+              Push
+            </button>
+            <button title="Refresh" onClick={() => void refresh()}>
+              ⟳
+            </button>
+          </>
+        )}
         <button
           onClick={() =>
             void window.api.pickDirectory('Open repository').then((p) => (p ? open(p) : undefined))

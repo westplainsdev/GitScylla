@@ -43,7 +43,7 @@ export default function App(): React.JSX.Element {
 
   return (
     <div className="app">
-      {repo && <TopBar />}
+      <TopBar />
       <TabBar />
       {error && (
         <div className="error-bar" onClick={() => setError(null)}>
