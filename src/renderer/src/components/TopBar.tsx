@@ -41,8 +41,9 @@ export default function TopBar(): React.JSX.Element {
                 </option>
               ))}
             </select>
-            <button className="mini" title="New branch" onClick={() => setNewBranch('')}>
-              + branch
+            <button className="tb-btn" title="New branch" onClick={() => setNewBranch('')}>
+              <Icon name="branch" size={18} />
+              <span>Branch</span>
             </button>
           </>
         ) : (
