@@ -24,13 +24,16 @@ underneath.
 
 ## Features
 
+- **Home dashboard** — pinned first tab with open/clone/init cards and a
+  recent-repositories list; every repo you've ever opened is one click away
 - **Repository tabs** — open several repos at once; they persist across
   restarts and a stale dot marks background tabs that changed on disk
 - **Commit graph** — topo-ordered lane layout matching `git log --graph`
   conventions, paged 300 commits at a time
 - **Full working-tree control** — stage, unstage, selectively multi-stage
-  via checkboxes, discard changes, delete untracked files (with a confirm
-  dialog — it is permanent)
+  via checkboxes, discard changes per-file or per-section, delete untracked
+  files, or nuke the whole tree (`reset --hard` + `clean -fd`) — destructive
+  ops always behind a confirm dialog listing affected files
 - **Line-level diffs** — unstaged, staged, untracked (synthesized add-diff),
   binary detection, per-file commit diffs, and stash diffs
 - **Branches** — local + remote listing, checkout, create, merge-into-current
@@ -70,8 +73,8 @@ underneath.
   the repo.
 - **File watching** is a hand-rolled per-directory `fs.watch` tree
   (Node's `{recursive: true}` crashes on Linux), debounced per repo.
-- **Session** — open tabs and the active tab persist to
-  `~/.config/git-client/session.json`.
+- **Session** — open tabs, the active tab, and the recent-repositories list
+  persist to `~/.config/git-client/session.json`.
 
 ## Requirements
 
