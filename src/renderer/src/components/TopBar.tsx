@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useRepo } from '../store'
 
 export default function TopBar(): React.JSX.Element {
-  const { repo, status, branches, busy, run, refresh, open, toggleProfile } = useRepo()
+  const { repo, status, branches, remotes, busy, run, refresh, open, toggleProfile } =
+    useRepo()
   const [newBranch, setNewBranch] = useState<string | null>(null)
   const [branchName, setBranchName] = useState('')
 
@@ -71,9 +72,15 @@ export default function TopBar(): React.JSX.Element {
 
       <div className="actions">
         {busy && <span className="busy">{busy}…</span>}
-        <button onClick={() => act('fetch', (r) => window.api.fetch(r))}>Fetch</button>
-        <button onClick={() => act('pull', (r) => window.api.pull(r))}>Pull</button>
-        <button onClick={() => act('push', (r) => window.api.push(r))}>Push</button>
+        <button disabled={remotes.length === 0} onClick={() => act('fetch', (r) => window.api.fetch(r))}>
+          Fetch
+        </button>
+        <button disabled={remotes.length === 0} onClick={() => act('pull', (r) => window.api.pull(r))}>
+          Pull
+        </button>
+        <button disabled={remotes.length === 0} onClick={() => act('push', (r) => window.api.push(r))}>
+          Push
+        </button>
         <button title="Refresh" onClick={() => void refresh()}>
           ⟳
         </button>
