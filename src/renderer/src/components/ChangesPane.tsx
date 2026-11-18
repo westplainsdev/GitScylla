@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRepo } from '../store'
+import BranchList from './BranchList'
 
 interface Row {
   path: string
@@ -111,6 +112,7 @@ export default function ChangesPane(): React.JSX.Element {
 
   return (
     <aside className="changes">
+      <BranchList />
       <div className="changes-head">Changes</div>
       <div className="changes-scroll">
         {clean && <div className="clean">Working tree clean</div>}
