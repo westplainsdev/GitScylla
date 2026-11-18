@@ -1305,3 +1305,25 @@ button.danger:hover:not(:disabled) {
 .home-tab .tab-name {
   font-weight: 600;
 }
+
+/* ---------- Topbar icon buttons ---------- */
+
+.tb-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 9px 4px;
+  font-size: 9px;
+  letter-spacing: 0.3px;
+  color: var(--fg-dim);
+}
+
+.tb-btn svg {
+  color: var(--fg);
+}
+
+.tb-btn:hover:not(:disabled) span,
+.tb-btn:hover:not(:disabled) svg {
+  color: var(--accent);
+}
