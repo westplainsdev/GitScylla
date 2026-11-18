@@ -3,16 +3,19 @@ import { join } from 'path'
 import { watch, type FSWatcher } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { simpleGit } from 'simple-git'
 import { GitService } from './git-service'
+import { CredentialStore } from './credentials'
 
-const git = new GitService()
+let git: GitService
+let creds: CredentialStore
 let watcher: FSWatcher | null = null
 let watchTimer: NodeJS.Timeout | null = null
 
 function watchRepo(win: BrowserWindow): void {
   watcher?.close()
   watcher = null
-  if (!git.repoPath) return
+  if (!git?.repoPath) return
   watcher = watch(git.repoPath, { recursive: true }, () => {
     if (watchTimer) clearTimeout(watchTimer)
     watchTimer = setTimeout(() => {
@@ -60,6 +63,24 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('git:fetch', () => git.fetch())
   ipcMain.handle('git:pull', () => git.pull())
   ipcMain.handle('git:push', () => git.push())
+
+  ipcMain.handle('creds:save', (_e, host: string, username: string, secret: string) =>
+    creds.save(host, username, secret)
+  )
+  ipcMain.handle('creds:clear', (_e, host: string) => creds.clear(host))
+  ipcMain.handle('creds:list', () => creds.list())
+
+  ipcMain.handle('profile:get', async () => {
+    const g = simpleGit()
+    const get = async (k: string): Promise<string> =>
+      (await g.raw(['config', '--global', '--get', k]).catch(() => '')).trim()
+    return { name: await get('user.name'), email: await get('user.email') }
+  })
+  ipcMain.handle('profile:set', async (_e, name: string, email: string) => {
+    const g = simpleGit()
+    await g.raw(['config', '--global', 'user.name', name])
+    await g.raw(['config', '--global', 'user.email', email])
+  })
 }
 
 function createWindow(): void {
@@ -99,6 +120,8 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.gitclient')
+  creds = new CredentialStore()
+  git = new GitService(creds)
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

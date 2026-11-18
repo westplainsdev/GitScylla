@@ -18,6 +18,12 @@ const api: GitApi = {
   fetch: () => ipcRenderer.invoke('git:fetch'),
   pull: () => ipcRenderer.invoke('git:pull'),
   push: () => ipcRenderer.invoke('git:push'),
+  saveCredentials: (host, username, secret) =>
+    ipcRenderer.invoke('creds:save', host, username, secret),
+  clearCredentials: (host) => ipcRenderer.invoke('creds:clear', host),
+  listCredentials: () => ipcRenderer.invoke('creds:list'),
+  getProfile: () => ipcRenderer.invoke('profile:get'),
+  setProfile: (name, email) => ipcRenderer.invoke('profile:set', name, email),
   onRepoChanged: (cb) => {
     const listener = (): void => cb()
     ipcRenderer.on('repo:changed', listener)

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useRepo } from '../store'
 
 export default function TopBar(): React.JSX.Element {
-  const { repo, status, branches, busy, run, refresh, open } = useRepo()
+  const { repo, status, branches, busy, run, refresh, open, toggleProfile } = useRepo()
   const [newBranch, setNewBranch] = useState<string | null>(null)
   const [branchName, setBranchName] = useState('')
 
@@ -83,6 +83,9 @@ export default function TopBar(): React.JSX.Element {
           }
         >
           Open…
+        </button>
+        <button title="Profile & credentials" onClick={toggleProfile}>
+          ☰
         </button>
       </div>
     </header>

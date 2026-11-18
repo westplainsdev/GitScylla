@@ -1,5 +1,17 @@
 import { create } from 'zustand'
-import type { BranchInfo, CommitInfo, RepoInfo, RepoStatus } from '../../shared/types'
+import type {
+  BranchInfo,
+  CommitInfo,
+  CredentialEntry,
+  GitProfile,
+  RepoInfo,
+  RepoStatus
+} from '../../shared/types'
+
+interface AuthRequest {
+  host: string
+  retry: () => void
+}
 
 interface RepoState {
   repo: RepoInfo | null
@@ -9,8 +21,16 @@ interface RepoState {
   selectedCommit: CommitInfo | null
   busy: string | null
   error: string | null
+  authRequest: AuthRequest | null
+  profileOpen: boolean
+  credentials: CredentialEntry[]
+  profile: GitProfile | null
 
   setError(e: string | null): void
+  setAuthRequest(r: AuthRequest | null): void
+  toggleProfile(): void
+  loadCredentials(): Promise<void>
+  loadProfile(): Promise<void>
   open(path: string): Promise<void>
   clone(url: string, dir: string): Promise<void>
   init(path: string): Promise<void>
@@ -27,8 +47,30 @@ export const useRepo = create<RepoState>((set, get) => ({
   selectedCommit: null,
   busy: null,
   error: null,
+  authRequest: null,
 
   setError: (error) => set({ error }),
+  setAuthRequest: (authRequest) => set({ authRequest }),
+  profileOpen: false,
+  credentials: [],
+  profile: null,
+
+  toggleProfile: () => {
+    const opening = !get().profileOpen
+    set({ profileOpen: opening })
+    if (opening) {
+      void get().loadCredentials()
+      void get().loadProfile()
+    }
+  },
+
+  loadCredentials: async () => {
+    set({ credentials: await window.api.listCredentials() })
+  },
+
+  loadProfile: async () => {
+    set({ profile: await window.api.getProfile() })
+  },
 
   open: async (path) => {
     try {
@@ -41,12 +83,23 @@ export const useRepo = create<RepoState>((set, get) => ({
   },
 
   clone: async (url, dir) => {
-    try {
+    const finish = async (): Promise<void> => {
       const repo = await window.api.cloneRepo(url, dir)
       set({ repo, selectedCommit: null, error: null })
       await get().refresh()
+    }
+    set({ busy: 'cloning', error: null })
+    try {
+      await finish()
     } catch (e) {
-      set({ error: msg(e) })
+      const host = authHost(e)
+      if (host) {
+        set({ authRequest: { host, retry: () => void get().clone(url, dir) } })
+      } else {
+        set({ error: msg(e) })
+      }
+    } finally {
+      set({ busy: null })
     }
   },
 
@@ -79,7 +132,12 @@ export const useRepo = create<RepoState>((set, get) => ({
       await get().refresh()
       return r
     } catch (e) {
-      set({ error: msg(e) })
+      const host = authHost(e)
+      if (host) {
+        set({ authRequest: { host, retry: () => void get().run(label, fn) } })
+      } else {
+        set({ error: msg(e) })
+      }
       return undefined
     } finally {
       set({ busy: null })
@@ -93,4 +151,9 @@ function msg(e: unknown): string {
     return e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
   }
   return String(e)
+}
+
+function authHost(e: unknown): string | null {
+  const m = msg(e).match(/GIT_AUTH_REQUIRED:(\S+)/)
+  return m ? m[1] : null
 }

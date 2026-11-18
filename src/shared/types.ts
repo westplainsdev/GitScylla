@@ -42,6 +42,16 @@ export interface RepoInfo {
   name: string
 }
 
+export interface CredentialEntry {
+  host: string
+  username: string
+}
+
+export interface GitProfile {
+  name: string
+  email: string
+}
+
 export interface GitApi {
   pickDirectory(title?: string): Promise<string | null>
   openRepo(path: string): Promise<RepoInfo>
@@ -58,6 +68,13 @@ export interface GitApi {
   fetch(): Promise<void>
   pull(): Promise<void>
   push(): Promise<void>
+  /** store credentials for a git host (e.g. github.com); secret is a token or password */
+  saveCredentials(host: string, username: string, secret: string): Promise<void>
+  clearCredentials(host: string): Promise<void>
+  listCredentials(): Promise<CredentialEntry[]>
+  /** global git identity (user.name / user.email) */
+  getProfile(): Promise<GitProfile>
+  setProfile(name: string, email: string): Promise<void>
   /** fires when the watched repo directory changes on disk */
   onRepoChanged(cb: () => void): () => void
 }

@@ -4,6 +4,8 @@ import Welcome from './components/Welcome'
 import TopBar from './components/TopBar'
 import ChangesPane from './components/ChangesPane'
 import CommitGraph from './components/CommitGraph'
+import AuthDialog from './components/AuthDialog'
+import ProfileSidebar from './components/ProfileSidebar'
 
 export default function App(): React.JSX.Element {
   const { repo, commits, selectedCommit, error, refresh, setError } = useRepo()
@@ -13,7 +15,15 @@ export default function App(): React.JSX.Element {
     return window.api.onRepoChanged(() => void refresh())
   }, [repo, refresh])
 
-  if (!repo) return <Welcome />
+  if (!repo) {
+    return (
+      <>
+        <Welcome />
+        <AuthDialog />
+        <ProfileSidebar />
+      </>
+    )
+  }
 
   return (
     <div className="app">
@@ -40,6 +50,8 @@ export default function App(): React.JSX.Element {
           )}
         </div>
       </div>
+      <AuthDialog />
+      <ProfileSidebar />
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { useRepo } from '../store'
 type Mode = 'none' | 'clone' | 'init'
 
 export default function Welcome(): React.JSX.Element {
-  const { open, clone, init, error, busy } = useRepo()
+  const { open, clone, init, error, busy, toggleProfile } = useRepo()
   const [mode, setMode] = useState<Mode>('none')
   const [url, setUrl] = useState('')
   const [dir, setDir] = useState('')
@@ -73,6 +73,10 @@ export default function Welcome(): React.JSX.Element {
       )}
 
       {error && <div className="error">{error}</div>}
+
+      <button className="mini profile-link" onClick={toggleProfile}>
+        ☰ Profile &amp; credentials
+      </button>
     </div>
   )
 }
