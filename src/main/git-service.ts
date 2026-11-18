@@ -219,6 +219,17 @@ export class GitService {
     await this.require().raw(['clean', '-fd', '--', ...paths])
   }
 
+  /** the "nuke everything" op: staged + unstaged reverted to HEAD, untracked deleted */
+  async discardAll(): Promise<void> {
+    try {
+      await this.require().reset(['--hard', 'HEAD'])
+    } catch {
+      // unborn HEAD (no commits yet): unstage everything so clean can remove it
+      await this.require().raw(['rm', '-r', '--cached', '--ignore-unmatch', '.']).catch(() => {})
+    }
+    await this.require().raw(['clean', '-fd'])
+  }
+
   async commit(message: string): Promise<void> {
     await this.require().commit(message)
   }

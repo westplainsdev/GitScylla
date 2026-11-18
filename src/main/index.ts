@@ -156,6 +156,7 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('git:stage', (_e, r: string, paths: string[]) => svc(r).stage(paths))
   ipcMain.handle('git:unstage', (_e, r: string, paths: string[]) => svc(r).unstage(paths))
   ipcMain.handle('git:discard', (_e, r: string, paths: string[]) => svc(r).discardChanges(paths))
+  ipcMain.handle('git:discard-all', (_e, r: string) => svc(r).discardAll())
   ipcMain.handle('git:delete-untracked', (_e, r: string, paths: string[]) =>
     svc(r).deleteUntracked(paths)
   )

@@ -94,6 +94,8 @@ export interface GitApi {
   unstage(repo: string, paths: string[]): Promise<void>
   /** restore unstaged tracked files to the index version — discards local edits */
   discardChanges(repo: string, paths: string[]): Promise<void>
+  /** nuke all local changes: reset --hard HEAD + clean -fd (handles unborn HEAD) */
+  discardAll(repo: string): Promise<void>
   /** permanently delete untracked files/dirs (git clean -fd) */
   deleteUntracked(repo: string, paths: string[]): Promise<void>
   commit(repo: string, message: string): Promise<void>

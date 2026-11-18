@@ -215,6 +215,20 @@ export default function ChangesPane(): React.JSX.Element {
     })
   }
 
+  /** the "oh shit" button — reset --hard + clean -fd across the whole tree */
+  const askDiscardAll = (): void => {
+    setPending({
+      title: 'Discard ALL changes?',
+      paths: [...conflicted, ...staged, ...unstaged, ...untracked].map((r) => r.path),
+      deleteVerb: true,
+      onConfirm: () =>
+        void (async () => {
+          await run('discarding', (repo) => window.api.discardAll(repo))
+          setSelected(new Set())
+        })()
+    })
+  }
+
   const toggle = (r: Row): void =>
     setSelected((s) => {
       const next = new Set(s)
@@ -257,7 +271,18 @@ export default function ChangesPane(): React.JSX.Element {
       )}
       <BranchList />
       <StashList />
-      <div className="changes-head">Changes</div>
+      <div className="changes-head">
+        <span>Changes</span>
+        {!clean && (
+          <button
+            className="mini danger nuke-all"
+            title="Discard ALL changes — staged, unstaged, and untracked (cannot be undone)"
+            onClick={askDiscardAll}
+          >
+            ✕ all
+          </button>
+        )}
+      </div>
       {selCount > 0 && (
         <div className="selection-bar">
           <span>{selCount} selected</span>

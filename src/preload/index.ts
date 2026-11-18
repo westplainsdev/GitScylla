@@ -16,6 +16,7 @@ const api: GitApi = {
   stage: (repo, paths) => ipcRenderer.invoke('git:stage', repo, paths),
   unstage: (repo, paths) => ipcRenderer.invoke('git:unstage', repo, paths),
   discardChanges: (repo, paths) => ipcRenderer.invoke('git:discard', repo, paths),
+  discardAll: (repo) => ipcRenderer.invoke('git:discard-all', repo),
   deleteUntracked: (repo, paths) => ipcRenderer.invoke('git:delete-untracked', repo, paths),
   commit: (repo, msg) => ipcRenderer.invoke('git:commit', repo, msg),
   fileDiff: (repo, path, staged) => ipcRenderer.invoke('git:file-diff', repo, path, staged),
