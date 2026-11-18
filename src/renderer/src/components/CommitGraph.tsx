@@ -41,7 +41,7 @@ function refBadge(ref: string): { cls: string; label: string } {
 }
 
 export default function CommitGraph({ commits }: { commits: CommitInfo[] }): React.JSX.Element {
-  const { selectedCommit, select } = useRepo()
+  const { selectedCommit, select, hasMore, loadingMore, loadMore } = useRepo()
   const layout = useMemo(() => layoutGraph(commits), [commits])
   const graphW = (layout.cols + 1) * COL_W + PAD_X
 
@@ -113,6 +113,13 @@ export default function CommitGraph({ commits }: { commits: CommitInfo[] }): Rea
             <span className="date">{relTime(c.date)}</span>
           </div>
         ))}
+        {hasMore && (
+          <div className="graph-loadmore" style={{ height: ROW_H * 2 }}>
+            <button className="mini" disabled={loadingMore} onClick={() => void loadMore()}>
+              {loadingMore ? 'Loading…' : `Load more (${commits.length} shown)`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

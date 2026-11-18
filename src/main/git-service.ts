@@ -139,18 +139,14 @@ export class GitService {
     return existsSync(join(this.gitDir(), name))
   }
 
-  async log(limit = 500): Promise<CommitInfo[]> {
+  async log(limit = 500, skip = 0): Promise<CommitInfo[]> {
     const format = ['%H', '%P', '%an', '%ae', '%at', '%D', '%s'].join(FIELD) + RECORD
+    const args = ['log', '--all', '--topo-order', '--decorate=short', `-n${limit}`]
+    if (skip > 0) args.push(`--skip=${skip}`)
+    args.push(`--pretty=format:${format}`)
     let out: string
     try {
-      out = await this.require().raw([
-        'log',
-        '--all',
-        '--topo-order',
-        '--decorate=short',
-        `-n${limit}`,
-        `--pretty=format:${format}`
-      ])
+      out = await this.require().raw(args)
     } catch {
       return [] // empty repo / no commits yet
     }
@@ -199,6 +195,16 @@ export class GitService {
 
   async unstage(paths: string[]): Promise<void> {
     await this.require().reset(['HEAD', '--', ...paths])
+  }
+
+  /** restores worktree files to the index version — the "discard local edits" op */
+  async discardChanges(paths: string[]): Promise<void> {
+    await this.require().raw(['checkout', '--', ...paths])
+  }
+
+  /** permanently removes untracked files and directories */
+  async deleteUntracked(paths: string[]): Promise<void> {
+    await this.require().raw(['clean', '-fd', '--', ...paths])
   }
 
   async commit(message: string): Promise<void> {

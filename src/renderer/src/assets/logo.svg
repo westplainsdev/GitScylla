@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- badge -->
+  <rect x="8" y="8" width="496" height="496" rx="100" fill="#0d1117"/>
+  <rect x="8" y="8" width="496" height="496" rx="100" fill="none" stroke="#30363d" stroke-width="5"/>
+
+  <!-- tentacles: lane-colored beziers rising from the sea -->
+  <g fill="none" stroke-linecap="round">
+    <path d="M104 372 C 88 300, 150 268, 128 196" stroke="#3fb950" stroke-width="15"/>
+    <path d="M178 372 C 162 300, 228 280, 208 168" stroke="#58a6ff" stroke-width="15"/>
+    <path d="M256 372 C 256 290, 256 240, 256 128" stroke="#a371f7" stroke-width="16"/>
+    <path d="M334 372 C 350 300, 288 280, 308 182" stroke="#d29922" stroke-width="15"/>
+    <path d="M408 372 C 424 310, 360 288, 388 222" stroke="#ff7b72" stroke-width="15"/>
+  </g>
+
+  <!-- heads: monster nodes, center one wears the merge double-ring -->
+  <g>
+    <circle cx="128" cy="178" r="23" fill="#3fb950" stroke="#0d1117" stroke-width="4"/>
+    <circle cx="208" cy="150" r="23" fill="#58a6ff" stroke="#0d1117" stroke-width="4"/>
+    <circle cx="256" cy="108" r="26" fill="#a371f7" stroke="#0d1117" stroke-width="4"/>
+    <circle cx="256" cy="108" r="36" fill="none" stroke="#a371f7" stroke-width="3" opacity="0.55"/>
+    <circle cx="308" cy="164" r="23" fill="#d29922" stroke="#0d1117" stroke-width="4"/>
+    <circle cx="388" cy="204" r="23" fill="#ff7b72" stroke="#0d1117" stroke-width="4"/>
+    <!-- eyes -->
+    <circle cx="121" cy="173" r="4.5" fill="#0d1117"/>
+    <circle cx="135" cy="173" r="4.5" fill="#0d1117"/>
+    <circle cx="201" cy="145" r="4.5" fill="#0d1117"/>
+    <circle cx="215" cy="145" r="4.5" fill="#0d1117"/>
+    <circle cx="248" cy="102" r="5" fill="#0d1117"/>
+    <circle cx="264" cy="102" r="5" fill="#0d1117"/>
+    <circle cx="301" cy="159" r="4.5" fill="#0d1117"/>
+    <circle cx="315" cy="159" r="4.5" fill="#0d1117"/>
+    <circle cx="381" cy="199" r="4.5" fill="#0d1117"/>
+    <circle cx="395" cy="199" r="4.5" fill="#0d1117"/>
+  </g>
+
+  <!-- waves -->
+  <g fill="none" stroke-linecap="round">
+    <path d="M64 388 Q 120 366 176 388 T 288 388 T 400 388 T 512 388" stroke="#1f6feb" stroke-width="10" opacity="0.85" transform="translate(-24,0)"/>
+    <path d="M40 408 Q 96 388 152 408 T 264 408 T 376 408 T 488 408" stroke="#58a6ff" stroke-width="7" opacity="0.4"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="256" y="466" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="62" letter-spacing="1">
+    <tspan fill="#58a6ff">Git</tspan><tspan fill="#e6edf3">Scylla</tspan>
+  </text>
+</svg>

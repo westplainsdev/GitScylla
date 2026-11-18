@@ -31,6 +31,9 @@ export interface Tab extends RepoInfo {
   stale?: boolean
 }
 
+/** commit history page size — "Load more" fetches one page at a time */
+const LOG_PAGE = 300
+
 interface RepoState {
   tabs: Tab[]
   activePath: string | null
@@ -39,6 +42,9 @@ interface RepoState {
 
   status: RepoStatus | null
   commits: CommitInfo[]
+  /** whether another page of history likely exists */
+  hasMore: boolean
+  loadingMore: boolean
   branches: BranchInfo[]
   stashes: StashEntry[]
   commitFileList: FileStatus[]
@@ -68,6 +74,7 @@ interface RepoState {
   clone(url: string, dir: string): Promise<void>
   init(path: string): Promise<void>
   refresh(): Promise<void>
+  loadMore(): Promise<void>
   handleFsChange(path: string): void
   select(c: CommitInfo | null): Promise<void>
   openDiff(t: DiffTarget): Promise<void>
@@ -92,6 +99,8 @@ export const useRepo = create<RepoState>((set, get) => {
 
     status: null,
     commits: [],
+    hasMore: false,
+    loadingMore: false,
     branches: [],
     stashes: [],
     commitFileList: [],
@@ -176,6 +185,7 @@ export const useRepo = create<RepoState>((set, get) => {
             repo: null,
             status: null,
             commits: [],
+            hasMore: false,
             branches: [],
             stashes: [],
             selectedCommit: null,
@@ -242,11 +252,11 @@ export const useRepo = create<RepoState>((set, get) => {
       const repo = rp()
       const [status, commits, branches, stashes] = await Promise.all([
         window.api.status(repo),
-        window.api.log(repo, 500),
+        window.api.log(repo, LOG_PAGE),
         window.api.branches(repo),
         window.api.stashList(repo)
       ])
-      set({ status, commits, branches, stashes })
+      set({ status, commits, hasMore: commits.length === LOG_PAGE, branches, stashes })
       // keep an open working-tree diff in sync with disk changes
       const dv = get().diffView
       if (dv && !dv.hash && dv.stashIndex === undefined) {
@@ -255,6 +265,23 @@ export const useRepo = create<RepoState>((set, get) => {
         } catch {
           set({ diffText: null })
         }
+      }
+    },
+
+    loadMore: async () => {
+      const { repo, commits, loadingMore } = get()
+      if (!repo || loadingMore) return
+      set({ loadingMore: true })
+      try {
+        const more = await window.api.log(repo.path, LOG_PAGE, commits.length)
+        const seen = new Set(commits.map((c) => c.hash))
+        set({
+          commits: [...commits, ...more.filter((c) => !seen.has(c.hash))],
+          hasMore: more.length === LOG_PAGE,
+          loadingMore: false
+        })
+      } catch (e) {
+        set({ error: msg(e), loadingMore: false })
       }
     },
 

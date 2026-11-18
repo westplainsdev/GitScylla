@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: git-client
+appId: com.gitscylla.app
+productName: GitScylla
 directories:
   buildResources: build
 files:
@@ -31,13 +31,12 @@ dmg:
 linux:
   target:
     - AppImage
-    - snap
     - deb
-  maintainer: electronjs.org
-  category: Utility
+  maintainer: Chris Berry <chris.berry07@gmail.com>
+  category: Development
+  executableName: gitscylla
 appImage:
   artifactName: ${name}-${version}.${ext}
+deb:
+  artifactName: ${name}_${version}_amd64.${ext}
 npmRebuild: false
-publish:
-  provider: generic
-  url: https://example.com/auto-updates

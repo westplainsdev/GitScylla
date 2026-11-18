@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join } from 'path'
-import { watch, readFileSync, writeFileSync, type FSWatcher } from 'fs'
+import { join, relative } from 'path'
+import { watch, stat, readFileSync, readdirSync, writeFileSync, type FSWatcher } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { simpleGit } from 'simple-git'
 import icon from '../../resources/icon.png?asset'
@@ -10,8 +10,72 @@ import type { Session } from '../shared/types'
 
 let creds: CredentialStore
 const repos = new Map<string, GitService>()
-const watchers = new Map<string, FSWatcher>()
-const watchTimers = new Map<string, NodeJS.Timeout>()
+const watchers = new Map<string, RepoWatcher>()
+
+/**
+ * Watches every directory under the repo with one fs.watch each.
+ * Node's built-in {recursive: true} crashes on Linux (fs/recursive_watch
+ * derefs a deleted dirent), so we descend manually instead.
+ */
+class RepoWatcher {
+  private watchers = new Map<string, FSWatcher>()
+  private timer: NodeJS.Timeout | undefined
+
+  constructor(
+    private root: string,
+    private notify: () => void
+  ) {}
+
+  start(): void {
+    this.add(this.root)
+  }
+
+  stop(): void {
+    if (this.timer) clearTimeout(this.timer)
+    for (const w of this.watchers.values()) w.close()
+    this.watchers.clear()
+  }
+
+  private bump(): void {
+    if (this.timer) clearTimeout(this.timer)
+    this.timer = setTimeout(() => this.notify(), 400)
+  }
+
+  private skip(dir: string): boolean {
+    // the object store is bulk churn that never affects status/commits UI
+    return relative(this.root, dir) === join('.git', 'objects')
+  }
+
+  private add(dir: string): void {
+    if (this.watchers.has(dir)) return
+    let w: FSWatcher
+    try {
+      w = watch(dir, (_e, name) => {
+        this.bump()
+        if (!name) return
+        const p = join(dir, name)
+        // pick up directories created between events; stat may fail if it's gone already
+        stat(p, (err, s) => {
+          if (!err && s.isDirectory() && !this.skip(p)) this.add(p)
+        })
+      })
+    } catch {
+      return
+    }
+    w.on('error', () => {
+      this.watchers.delete(dir)
+      w.close()
+    })
+    this.watchers.set(dir, w)
+    try {
+      for (const e of readdirSync(dir, { withFileTypes: true })) {
+        if (e.isDirectory() && !this.skip(join(dir, e.name))) this.add(join(dir, e.name))
+      }
+    } catch {
+      /* dir vanished mid-scan */
+    }
+  }
+}
 
 function svc(repo: string): GitService {
   const s = repos.get(repo)
@@ -21,22 +85,15 @@ function svc(repo: string): GitService {
 
 function watchRepo(win: BrowserWindow, path: string): void {
   if (watchers.has(path)) return
-  const w = watch(path, { recursive: true }, () => {
-    const t = watchTimers.get(path)
-    if (t) clearTimeout(t)
-    watchTimers.set(
-      path,
-      setTimeout(() => {
-        if (!win.isDestroyed()) win.webContents.send('repo:changed', path)
-      }, 400)
-    )
+  const w = new RepoWatcher(path, () => {
+    if (!win.isDestroyed()) win.webContents.send('repo:changed', path)
   })
-  w.on('error', () => {})
+  w.start()
   watchers.set(path, w)
 }
 
 function unwatchRepo(path: string): void {
-  watchers.get(path)?.close()
+  watchers.get(path)?.stop()
   watchers.delete(path)
 }
 
@@ -88,7 +145,9 @@ function registerIpc(win: BrowserWindow): void {
   })
 
   ipcMain.handle('git:status', (_e, r: string) => svc(r).status())
-  ipcMain.handle('git:log', (_e, r: string, limit?: number) => svc(r).log(limit))
+  ipcMain.handle('git:log', (_e, r: string, limit?: number, skip?: number) =>
+    svc(r).log(limit, skip)
+  )
   ipcMain.handle('git:branches', (_e, r: string) => svc(r).branches())
   ipcMain.handle('git:checkout', (_e, r: string, name: string) => svc(r).checkout(name))
   ipcMain.handle('git:create-branch', (_e, r: string, name: string) =>
@@ -96,6 +155,10 @@ function registerIpc(win: BrowserWindow): void {
   )
   ipcMain.handle('git:stage', (_e, r: string, paths: string[]) => svc(r).stage(paths))
   ipcMain.handle('git:unstage', (_e, r: string, paths: string[]) => svc(r).unstage(paths))
+  ipcMain.handle('git:discard', (_e, r: string, paths: string[]) => svc(r).discardChanges(paths))
+  ipcMain.handle('git:delete-untracked', (_e, r: string, paths: string[]) =>
+    svc(r).deleteUntracked(paths)
+  )
   ipcMain.handle('git:commit', (_e, r: string, msg: string) => svc(r).commit(msg))
   ipcMain.handle('git:file-diff', (_e, r: string, path: string, staged: boolean) =>
     svc(r).fileDiff(path, staged)
@@ -160,7 +223,7 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    title: 'Git Client',
+    title: 'GitScylla',
     backgroundColor: '#0d1117',
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -189,7 +252,9 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.gitclient')
+  electronApp.setAppUserModelId('com.gitscylla.app')
+  // keep the original config dir so stored credentials + session carry over
+  app.setPath('userData', join(app.getPath('appData'), 'git-client'))
   creds = new CredentialStore()
 
   app.on('browser-window-created', (_, window) => {

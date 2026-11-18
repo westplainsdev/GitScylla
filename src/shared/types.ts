@@ -78,12 +78,16 @@ export interface GitApi {
   cloneRepo(url: string, parentDir: string): Promise<RepoInfo>
   initRepo(path: string): Promise<RepoInfo>
   status(repo: string): Promise<RepoStatus>
-  log(repo: string, limit?: number): Promise<CommitInfo[]>
+  log(repo: string, limit?: number, skip?: number): Promise<CommitInfo[]>
   branches(repo: string): Promise<BranchInfo[]>
   checkout(repo: string, name: string): Promise<void>
   createBranch(repo: string, name: string): Promise<void>
   stage(repo: string, paths: string[]): Promise<void>
   unstage(repo: string, paths: string[]): Promise<void>
+  /** restore unstaged tracked files to the index version — discards local edits */
+  discardChanges(repo: string, paths: string[]): Promise<void>
+  /** permanently delete untracked files/dirs (git clean -fd) */
+  deleteUntracked(repo: string, paths: string[]): Promise<void>
   commit(repo: string, message: string): Promise<void>
   /** unified diff text for a working-tree file */
   fileDiff(repo: string, path: string, staged: boolean): Promise<string>
