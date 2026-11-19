@@ -877,6 +877,45 @@ code {
   color: var(--accent);
 }
 
+.amend-btn {
+  margin-bottom: 10px;
+}
+
+.amend-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.amend-input {
+  border-color: var(--red);
+  resize: vertical;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.amend-input:focus {
+  outline: 1px solid var(--red);
+}
+
+.amend-warn {
+  color: var(--orange);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.amend-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.amend-confirm {
+  color: var(--red);
+  border-color: var(--red);
+}
+
 .detail-pane .detail-subject {
   font-weight: 600;
   line-height: 1.4;

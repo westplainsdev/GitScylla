@@ -102,6 +102,10 @@ export interface GitApi {
   /** permanently delete untracked files/dirs (git clean -fd) */
   deleteUntracked(repo: string, paths: string[]): Promise<void>
   commit(repo: string, message: string): Promise<void>
+  /** full commit message (%B) — used to prefill the amend editor so bodies aren't lost */
+  commitMessage(repo: string, hash: string): Promise<string>
+  /** rewrite HEAD's message only; --only keeps staged changes out of the amended commit */
+  amendMessage(repo: string, message: string): Promise<void>
   /** move the current branch to <hash>; mode decides where the dropped changes go */
   resetTo(repo: string, hash: string, mode: ResetMode): Promise<void>
   /** create a new commit that undoes <hash>; merge commits revert against first parent */

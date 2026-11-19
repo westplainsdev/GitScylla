@@ -161,6 +161,10 @@ function registerIpc(win: BrowserWindow): void {
     svc(r).deleteUntracked(paths)
   )
   ipcMain.handle('git:commit', (_e, r: string, msg: string) => svc(r).commit(msg))
+  ipcMain.handle('git:commit-message', (_e, r: string, hash: string) =>
+    svc(r).commitMessage(hash)
+  )
+  ipcMain.handle('git:amend', (_e, r: string, message: string) => svc(r).amendMessage(message))
   ipcMain.handle('git:reset', (_e, r: string, hash: string, mode: 'soft' | 'mixed' | 'hard') =>
     svc(r).resetTo(hash, mode)
   )

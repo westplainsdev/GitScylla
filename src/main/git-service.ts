@@ -235,6 +235,15 @@ export class GitService {
     await this.require().commit(message)
   }
 
+  async commitMessage(hash: string): Promise<string> {
+    return this.require().raw(['log', '--format=%B', '-1', hash])
+  }
+
+  /** --only: rewrite the message without sweeping staged changes into the commit */
+  async amendMessage(message: string): Promise<void> {
+    await this.require().raw(['commit', '--amend', '--only', '-m', message])
+  }
+
   async resetTo(hash: string, mode: 'soft' | 'mixed' | 'hard'): Promise<void> {
     await this.require().raw(['reset', `--${mode}`, hash])
   }
