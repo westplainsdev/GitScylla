@@ -189,8 +189,11 @@ export default function ChangesPane(): React.JSX.Element {
   const stage = (paths: string[]): void => void run('staging', (repo) => window.api.stage(repo, paths))
   const unstage = (paths: string[]): void => void run('unstaging', (repo) => window.api.unstage(repo, paths))
   const commit = async (): Promise<void> => {
-    const r = await run('committing', (repo) => window.api.commit(repo, message))
-    if (r !== undefined) setMessage('')
+    const r = await run('committing', async (repo) => {
+      await window.api.commit(repo, message)
+      return true
+    })
+    if (r) setMessage('')
   }
 
   // --- discard flows: every route goes through the confirm dialog ---
