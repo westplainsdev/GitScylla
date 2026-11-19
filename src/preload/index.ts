@@ -19,6 +19,8 @@ const api: GitApi = {
   discardAll: (repo) => ipcRenderer.invoke('git:discard-all', repo),
   deleteUntracked: (repo, paths) => ipcRenderer.invoke('git:delete-untracked', repo, paths),
   commit: (repo, msg) => ipcRenderer.invoke('git:commit', repo, msg),
+  resetTo: (repo, hash, mode) => ipcRenderer.invoke('git:reset', repo, hash, mode),
+  revertCommit: (repo, hash) => ipcRenderer.invoke('git:revert', repo, hash),
   fileDiff: (repo, path, staged) => ipcRenderer.invoke('git:file-diff', repo, path, staged),
   commitFiles: (repo, hash, parent) =>
     ipcRenderer.invoke('git:commit-files', repo, hash, parent),

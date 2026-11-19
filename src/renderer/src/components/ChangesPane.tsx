@@ -249,8 +249,15 @@ export default function ChangesPane(): React.JSX.Element {
 
   const clean = staged.length + unstaged.length + untracked.length + conflicted.length === 0
 
-  const inProgress = status.merging || status.rebasing || status.cherryPicking
-  const opLabel = status.merging ? 'merge' : status.rebasing ? 'rebase' : 'cherry-pick'
+  const inProgress =
+    status.merging || status.rebasing || status.cherryPicking || status.reverting
+  const opLabel = status.merging
+    ? 'merge'
+    : status.rebasing
+      ? 'rebase'
+      : status.cherryPicking
+        ? 'cherry-pick'
+        : 'revert'
 
   return (
     <aside className="changes">

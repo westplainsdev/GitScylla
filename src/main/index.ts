@@ -161,6 +161,10 @@ function registerIpc(win: BrowserWindow): void {
     svc(r).deleteUntracked(paths)
   )
   ipcMain.handle('git:commit', (_e, r: string, msg: string) => svc(r).commit(msg))
+  ipcMain.handle('git:reset', (_e, r: string, hash: string, mode: 'soft' | 'mixed' | 'hard') =>
+    svc(r).resetTo(hash, mode)
+  )
+  ipcMain.handle('git:revert', (_e, r: string, hash: string) => svc(r).revertCommit(hash))
   ipcMain.handle('git:file-diff', (_e, r: string, path: string, staged: boolean) =>
     svc(r).fileDiff(path, staged)
   )
@@ -211,7 +215,17 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('creds:clear', (_e, host: string) => creds.clear(host))
   ipcMain.handle('creds:list', () => creds.list())
 
-  ipcMain.handle('app:version', () => app.getVersion())
+  ipcMain.handle('app:version', () => {
+    // unpackaged/dev runs report the Electron version — prefer package.json
+    try {
+      const pkg = JSON.parse(readFileSync(join(app.getAppPath(), 'package.json'), 'utf8')) as {
+        version?: string
+      }
+      return pkg.version ?? app.getVersion()
+    } catch {
+      return app.getVersion()
+    }
+  })
 
   ipcMain.handle('profile:get', async () => {
     const g = simpleGit()

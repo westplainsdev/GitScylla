@@ -139,7 +139,8 @@ export class GitService {
         this.stateFile('REBASE_HEAD') ||
         existsSync(join(this.gitDir(), 'rebase-merge')) ||
         existsSync(join(this.gitDir(), 'rebase-apply')),
-      cherryPicking: this.stateFile('CHERRY_PICK_HEAD')
+      cherryPicking: this.stateFile('CHERRY_PICK_HEAD'),
+      reverting: this.stateFile('REVERT_HEAD')
     }
   }
 
@@ -232,6 +233,23 @@ export class GitService {
 
   async commit(message: string): Promise<void> {
     await this.require().commit(message)
+  }
+
+  async resetTo(hash: string, mode: 'soft' | 'mixed' | 'hard'): Promise<void> {
+    await this.require().raw(['reset', `--${mode}`, hash])
+  }
+
+  async revertCommit(hash: string): Promise<void> {
+    const git = this.require()
+    // reverting a merge commit needs -m 1 (diff against first parent)
+    const line = await git.raw(['rev-list', '--parents', '-n', '1', hash])
+    const merge = line.trim().split(/\s+/).length > 2
+    try {
+      await git.raw(['revert', '--no-edit', ...(merge ? ['-m', '1'] : []), hash])
+    } catch (e) {
+      if (isConflict(e)) return // conflicted revert — banner + abort flow handles it
+      throw e
+    }
   }
 
   async fetch(): Promise<void> {
@@ -344,6 +362,7 @@ export class GitService {
     if (s.merging) return git.raw(['merge', '--abort']).then(() => {})
     if (s.rebasing) return git.raw(['rebase', '--abort']).then(() => {})
     if (s.cherryPicking) return git.raw(['cherry-pick', '--abort']).then(() => {})
+    if (s.reverting) return git.raw(['revert', '--abort']).then(() => {})
   }
 
   /** resolves a conflicted file by taking one side, then stages it */

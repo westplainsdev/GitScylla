@@ -10,6 +10,8 @@ export interface CommitInfo {
   subject: string
 }
 
+export type ResetMode = 'soft' | 'mixed' | 'hard'
+
 export interface FileStatus {
   path: string
   /** staged status code: M A D R C ' ' */
@@ -33,6 +35,7 @@ export interface RepoStatus {
   merging: boolean
   rebasing: boolean
   cherryPicking: boolean
+  reverting: boolean
 }
 
 export interface RemoteInfo {
@@ -99,6 +102,10 @@ export interface GitApi {
   /** permanently delete untracked files/dirs (git clean -fd) */
   deleteUntracked(repo: string, paths: string[]): Promise<void>
   commit(repo: string, message: string): Promise<void>
+  /** move the current branch to <hash>; mode decides where the dropped changes go */
+  resetTo(repo: string, hash: string, mode: ResetMode): Promise<void>
+  /** create a new commit that undoes <hash>; merge commits revert against first parent */
+  revertCommit(repo: string, hash: string): Promise<void>
   /** unified diff text for a working-tree file */
   fileDiff(repo: string, path: string, staged: boolean): Promise<string>
   /** files changed by a commit (diffed against first parent; null parent = root commit) */
