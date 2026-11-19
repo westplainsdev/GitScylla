@@ -184,22 +184,40 @@ export class GitService {
   }
 
   async branches(): Promise<BranchInfo[]> {
-    const b = await this.require().branch(['-a'])
+    const git = this.require()
+    const [b, up] = await Promise.all([
+      git.branch(['-a']),
+      git
+        .raw(['for-each-ref', '--format=%(refname:short)%09%(upstream:short)', 'refs/heads'])
+        .catch(() => '')
+    ])
+    const upstreams = new Map(
+      up
+        .split('\n')
+        .filter(Boolean)
+        .map((l) => l.split('\t') as [string, string | undefined])
+    )
     return b.all
       .filter((name) => !name.includes('HEAD ->'))
-      .map((name) => ({
-        name: name.replace(/^remotes\//, ''),
-        current: name === b.current,
-        remote: name.startsWith('remotes/')
-      }))
+      .map((name) => {
+        const remote = name.startsWith('remotes/')
+        const local = name.replace(/^remotes\//, '')
+        return {
+          name: local,
+          current: name === b.current,
+          remote,
+          upstream: remote ? undefined : upstreams.get(local) || undefined
+        }
+      })
   }
 
-  async checkout(name: string): Promise<void> {
+  async checkout(name: string): Promise<string> {
     await this.require().checkout(name)
+    return `Switched to branch '${name}'`
   }
 
   /** "make a local copy of origin/x": checkout x if it exists, else create it tracking the remote ref */
-  async checkoutRemote(remoteRef: string): Promise<void> {
+  async checkoutRemote(remoteRef: string): Promise<string> {
     const local = remoteRef.split('/').slice(1).join('/')
     const git = this.require()
     const exists = await git
@@ -208,16 +226,18 @@ export class GitService {
       .catch(() => false)
     if (exists) {
       await git.checkout(local)
-    } else {
-      await git.raw(['checkout', '-b', local, '--track', remoteRef])
+      return `Switched to branch '${local}'`
     }
+    await git.raw(['checkout', '-b', local, '--track', remoteRef])
+    return `Created branch '${local}' tracking '${remoteRef}'`
   }
 
-  async createBranch(name: string): Promise<void> {
+  async createBranch(name: string): Promise<string> {
     await this.require().checkoutLocalBranch(name)
+    return `Created and switched to branch '${name}'`
   }
 
-  async deleteBranch(name: string, force: boolean): Promise<void> {
+  async deleteBranch(name: string, force: boolean): Promise<string> {
     try {
       await this.require().raw(['branch', force ? '-D' : '-d', name])
     } catch (e) {
@@ -226,6 +246,7 @@ export class GitService {
       if (/not fully merged/i.test(m)) throw new Error('GIT_BRANCH_UNMERGED', { cause: e })
       throw e
     }
+    return `Deleted branch '${name}'`
   }
 
   async stage(paths: string[]): Promise<void> {
@@ -247,7 +268,7 @@ export class GitService {
   }
 
   /** the "nuke everything" op: staged + unstaged reverted to HEAD, untracked deleted */
-  async discardAll(): Promise<void> {
+  async discardAll(): Promise<string> {
     try {
       await this.require().reset(['--hard', 'HEAD'])
     } catch {
@@ -255,10 +276,15 @@ export class GitService {
       await this.require().raw(['rm', '-r', '--cached', '--ignore-unmatch', '.']).catch(() => {})
     }
     await this.require().raw(['clean', '-fd'])
+    return 'Working tree reset to HEAD'
   }
 
-  async commit(message: string): Promise<void> {
-    await this.require().commit(message)
+  async commit(message: string): Promise<string> {
+    const r = await this.require().commit(message)
+    // subject line only — a long message would blow out the toast
+    const subject = message.split('\n', 1)[0]
+    const short = subject.length > 80 ? `${subject.slice(0, 77)}…` : subject
+    return `Committed '${short}'${r.branch ? ` on '${r.branch}'` : ''}`
   }
 
   async commitMessage(hash: string): Promise<string> {
@@ -266,15 +292,17 @@ export class GitService {
   }
 
   /** --only: rewrite the message without sweeping staged changes into the commit */
-  async amendMessage(message: string): Promise<void> {
+  async amendMessage(message: string): Promise<string> {
     await this.require().raw(['commit', '--amend', '--only', '-m', message])
+    return 'Amended commit message'
   }
 
-  async resetTo(hash: string, mode: 'soft' | 'mixed' | 'hard'): Promise<void> {
+  async resetTo(hash: string, mode: 'soft' | 'mixed' | 'hard'): Promise<string> {
     await this.require().raw(['reset', `--${mode}`, hash])
+    return `Reset to ${hash.slice(0, 7)} (${mode})`
   }
 
-  async revertCommit(hash: string): Promise<void> {
+  async revertCommit(hash: string): Promise<string> {
     const git = this.require()
     // reverting a merge commit needs -m 1 (diff against first parent)
     const line = await git.raw(['rev-list', '--parents', '-n', '1', hash])
@@ -282,17 +310,34 @@ export class GitService {
     try {
       await git.raw(['revert', '--no-edit', ...(merge ? ['-m', '1'] : []), hash])
     } catch (e) {
-      if (isConflict(e)) return // conflicted revert — banner + abort flow handles it
+      if (isConflict(e)) {
+        // conflicted revert — banner + abort flow handles it
+        return `Reverting ${hash.slice(0, 7)} — conflicts to resolve`
+      }
       throw e
     }
+    return `Reverted ${hash.slice(0, 7)}`
   }
 
-  async fetch(): Promise<void> {
-    await this.authed(await this.remoteHost(), (g) => g.fetch(['--all', '--prune']))
+  async fetch(): Promise<string> {
+    const res = await this.authed(await this.remoteHost(), (g) => g.fetch(['--all', '--prune']))
+    const updated = res?.updated ?? []
+    if (updated.length === 0) return 'Already up to date — nothing new on the remotes'
+    const names = updated
+      .slice(0, 4)
+      .map((u) => u.name.replace(/^refs\/remotes\//, ''))
+      .join(', ')
+    const more = updated.length > 4 ? ` +${updated.length - 4} more` : ''
+    return `Fetched ${updated.length} update${updated.length === 1 ? '' : 's'}: ${names}${more}`
   }
 
-  async pull(rebase?: boolean): Promise<void> {
-    await this.authed(await this.remoteHost(), async (g) => {
+  async pull(rebase?: boolean): Promise<string> {
+    return this.authed(await this.remoteHost(), async (g) => {
+      // count incoming commits first so the summary can say what actually happened
+      const incoming = await g
+        .raw(['rev-list', '--count', 'HEAD..@{u}'])
+        .then((x) => Number(x.trim()))
+        .catch(() => NaN)
       try {
         const strategy = rebase === undefined ? [] : rebase ? ['--rebase'] : ['--no-rebase']
         await g.raw(['pull', ...strategy])
@@ -303,9 +348,14 @@ export class GitService {
           throw new Error('GIT_PULL_DIVERGENT', { cause: e })
         }
         // merge conflicts on pull are a state, not a failure — the UI shows the merge banner
-        if (isConflict(e)) return
+        if (isConflict(e)) return 'Pull hit conflicts — resolve and commit, or abort'
         throw e
       }
+      if (incoming === 0) return 'Already up to date'
+      const n = Number.isFinite(incoming)
+        ? `${incoming} commit${incoming === 1 ? '' : 's'}`
+        : 'changes'
+      return rebase ? `Rebased onto upstream (${n})` : `Pulled ${n} from upstream`
     })
   }
 
@@ -313,16 +363,27 @@ export class GitService {
     await this.require().raw(['config', 'pull.rebase', String(rebase)])
   }
 
-  async push(): Promise<void> {
+  async push(): Promise<string> {
     const host = await this.remoteHost()
-    const s = await this.require().status()
-    await this.authed(host, async (g) => {
+    const git = this.require()
+    const s = await git.status()
+    const upstream = await git
+      .raw(['rev-parse', '--abbrev-ref', '@{u}'])
+      .then((x) => x.trim())
+      .catch(() => '')
+    const ahead = upstream
+      ? await git
+          .raw(['rev-list', '--count', '@{u}..HEAD'])
+          .then((x) => Number(x.trim()))
+          .catch(() => NaN)
+      : NaN
+    return this.authed(host, async (g) => {
       try {
         if (s.current && !s.tracking) {
           await g.push(['--set-upstream', 'origin', s.current])
-        } else {
-          await g.push()
+          return `Pushed '${s.current}' and set upstream to 'origin/${s.current}'`
         }
+        await g.push()
       } catch (e) {
         const m = e instanceof Error ? e.message : String(e)
         // someone pushed since our last fetch — translate git's rejection
@@ -334,6 +395,10 @@ export class GitService {
         }
         throw e
       }
+      if (ahead === 0) return 'Everything up to date'
+      return Number.isFinite(ahead)
+        ? `Pushed ${ahead} commit${ahead === 1 ? '' : 's'} to ${upstream}`
+        : `Pushed to ${upstream || 'origin'}`
     })
   }
 
@@ -405,23 +470,34 @@ export class GitService {
       : git.raw(['show', '--format=', hash, '--', path])
   }
 
-  async mergeBranch(name: string): Promise<void> {
+  async mergeBranch(name: string): Promise<string> {
     const git = this.require()
+    const s = await this.status()
     try {
       await git.merge([name])
     } catch (e) {
-      if (isConflict(e)) return // landed in merge-conflict state — banner handles it
+      // landed in merge-conflict state — banner handles it
+      if (isConflict(e)) return `Merging '${name}' — conflicts to resolve`
       throw e
     }
+    return `Merged '${name}' into '${s.current ?? 'HEAD'}'`
   }
 
-  async abortOperation(): Promise<void> {
+  async abortOperation(): Promise<string> {
     const git = this.require()
     const s = await this.status()
-    if (s.merging) return git.raw(['merge', '--abort']).then(() => {})
-    if (s.rebasing) return git.raw(['rebase', '--abort']).then(() => {})
-    if (s.cherryPicking) return git.raw(['cherry-pick', '--abort']).then(() => {})
-    if (s.reverting) return git.raw(['revert', '--abort']).then(() => {})
+    const op = s.merging
+      ? 'merge'
+      : s.rebasing
+        ? 'rebase'
+        : s.cherryPicking
+          ? 'cherry-pick'
+          : s.reverting
+            ? 'revert'
+            : ''
+    if (!op) return 'Nothing in progress to abort'
+    await git.raw([op, '--abort'])
+    return `Aborted ${op}`
   }
 
   /** resolves a conflicted file by taking one side, then stages it */
@@ -431,10 +507,11 @@ export class GitService {
     await git.add([path])
   }
 
-  async stash(message?: string): Promise<void> {
+  async stash(message?: string): Promise<string> {
     const args = ['stash', 'push']
     if (message) args.push('-m', message)
     await this.require().raw(args)
+    return 'Stashed changes'
   }
 
   async stashList(): Promise<StashEntry[]> {
@@ -449,27 +526,31 @@ export class GitService {
       })
   }
 
-  async stashApply(index: number): Promise<void> {
-    await this.stashOp('apply', index)
+  async stashApply(index: number): Promise<string> {
+    return this.stashOp('apply', index)
   }
 
-  async stashPop(index: number): Promise<void> {
-    await this.stashOp('pop', index)
+  async stashPop(index: number): Promise<string> {
+    return this.stashOp('pop', index)
   }
 
-  async stashDrop(index: number): Promise<void> {
-    await this.stashOp('drop', index)
+  async stashDrop(index: number): Promise<string> {
+    return this.stashOp('drop', index)
   }
 
-  private async stashOp(op: 'apply' | 'pop' | 'drop', index: number): Promise<void> {
+  private async stashOp(op: 'apply' | 'pop' | 'drop', index: number): Promise<string> {
     const git = this.require()
     try {
       await git.raw(['stash', op, `stash@{${index}}`])
     } catch (e) {
       // apply/pop can land in conflict state — that's a valid outcome
-      if (op !== 'drop' && isConflict(e)) return
+      if (op !== 'drop' && isConflict(e)) {
+        return `Applying stash@{${index}} — conflicts to resolve`
+      }
       throw e
     }
+    const verb = op === 'apply' ? 'Applied' : op === 'pop' ? 'Popped' : 'Dropped'
+    return `${verb} stash@{${index}}`
   }
 
   async stashShow(index: number): Promise<string> {

@@ -53,6 +53,8 @@ export interface BranchInfo {
   name: string
   current: boolean
   remote: boolean
+  /** upstream tracking ref for local branches, e.g. "origin/main" */
+  upstream?: string
 }
 
 export interface RepoInfo {
@@ -91,29 +93,29 @@ export interface GitApi {
   status(repo: string): Promise<RepoStatus>
   log(repo: string, limit?: number, skip?: number): Promise<CommitInfo[]>
   branches(repo: string): Promise<BranchInfo[]>
-  checkout(repo: string, name: string): Promise<void>
+  checkout(repo: string, name: string): Promise<string>
   /** switch to a remote ref's branch — reuses the local branch or creates one that tracks it */
-  checkoutRemote(repo: string, remoteRef: string): Promise<void>
-  createBranch(repo: string, name: string): Promise<void>
+  checkoutRemote(repo: string, remoteRef: string): Promise<string>
+  createBranch(repo: string, name: string): Promise<string>
   /** delete a local branch; force bypasses git's fully-merged safety check */
-  deleteBranch(repo: string, name: string, force: boolean): Promise<void>
+  deleteBranch(repo: string, name: string, force: boolean): Promise<string>
   stage(repo: string, paths: string[]): Promise<void>
   unstage(repo: string, paths: string[]): Promise<void>
   /** restore unstaged tracked files to the index version — discards local edits */
   discardChanges(repo: string, paths: string[]): Promise<void>
   /** nuke all local changes: reset --hard HEAD + clean -fd (handles unborn HEAD) */
-  discardAll(repo: string): Promise<void>
+  discardAll(repo: string): Promise<string>
   /** permanently delete untracked files/dirs (git clean -fd) */
   deleteUntracked(repo: string, paths: string[]): Promise<void>
-  commit(repo: string, message: string): Promise<void>
+  commit(repo: string, message: string): Promise<string>
   /** full commit message (%B) — used to prefill the amend editor so bodies aren't lost */
   commitMessage(repo: string, hash: string): Promise<string>
   /** rewrite HEAD's message only; --only keeps staged changes out of the amended commit */
-  amendMessage(repo: string, message: string): Promise<void>
+  amendMessage(repo: string, message: string): Promise<string>
   /** move the current branch to <hash>; mode decides where the dropped changes go */
-  resetTo(repo: string, hash: string, mode: ResetMode): Promise<void>
+  resetTo(repo: string, hash: string, mode: ResetMode): Promise<string>
   /** create a new commit that undoes <hash>; merge commits revert against first parent */
-  revertCommit(repo: string, hash: string): Promise<void>
+  revertCommit(repo: string, hash: string): Promise<string>
   /** unified diff text for a working-tree file */
   fileDiff(repo: string, path: string, staged: boolean): Promise<string>
   /** files changed by a commit (diffed against first parent; null parent = root commit) */
@@ -126,23 +128,23 @@ export interface GitApi {
     path: string
   ): Promise<string>
   /** merge another branch into the current one */
-  mergeBranch(repo: string, name: string): Promise<void>
+  mergeBranch(repo: string, name: string): Promise<string>
   /** abort an in-progress merge/rebase/cherry-pick */
-  abortOperation(repo: string): Promise<void>
+  abortOperation(repo: string): Promise<string>
   /** resolve a conflicted file by taking one side wholesale */
   resolveSide(repo: string, path: string, side: 'ours' | 'theirs'): Promise<void>
-  stash(repo: string, message?: string): Promise<void>
+  stash(repo: string, message?: string): Promise<string>
   stashList(repo: string): Promise<StashEntry[]>
-  stashApply(repo: string, index: number): Promise<void>
-  stashPop(repo: string, index: number): Promise<void>
-  stashDrop(repo: string, index: number): Promise<void>
+  stashApply(repo: string, index: number): Promise<string>
+  stashPop(repo: string, index: number): Promise<string>
+  stashDrop(repo: string, index: number): Promise<string>
   /** unified diff of a stash entry */
   stashShow(repo: string, index: number): Promise<string>
-  fetch(repo: string): Promise<void>
-  pull(repo: string, rebase?: boolean): Promise<void>
+  fetch(repo: string): Promise<string>
+  pull(repo: string, rebase?: boolean): Promise<string>
   /** persist the reconcile strategy for this repo (git config pull.rebase) */
   setPullStrategy(repo: string, rebase: boolean): Promise<void>
-  push(repo: string): Promise<void>
+  push(repo: string): Promise<string>
   remotes(repo: string): Promise<RemoteInfo[]>
   addRemote(repo: string, name: string, url: string): Promise<void>
   removeRemote(repo: string, name: string): Promise<void>

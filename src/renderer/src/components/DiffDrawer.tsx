@@ -28,7 +28,7 @@ export default function DiffDrawer(): React.JSX.Element | null {
   return (
     <aside className="diff-drawer">
       <div className="diff-head">
-        <code className="diff-title" title={diffView.path}>
+        <code className="diff-title" data-tip={diffView.path}>
           {title}
         </code>
         <button className="mini" onClick={closeDiff}>

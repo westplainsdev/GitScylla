@@ -26,7 +26,7 @@ export default function ReconcileDialog(): React.JSX.Element | null {
     setPullDivergent(false)
     void run('pull', async (repo) => {
       if (remember) await window.api.setPullStrategy(repo, rebase)
-      await window.api.pull(repo, rebase)
+      return window.api.pull(repo, rebase)
     })
   }
 

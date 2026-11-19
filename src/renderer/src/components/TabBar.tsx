@@ -7,7 +7,7 @@ export default function TabBar(): React.JSX.Element {
     <div className="tabbar">
       <div
         className={`tab home-tab${activePath === null ? ' active' : ''}`}
-        title="Home"
+        data-tip="Home"
         onClick={() => activePath !== null && activateHome()}
       >
         <span className="tab-name">⌂ Home</span>
@@ -16,14 +16,15 @@ export default function TabBar(): React.JSX.Element {
         <div
           key={t.path}
           className={`tab${t.path === activePath ? ' active' : ''}`}
-          title={t.path}
+          data-tip={t.path}
           onClick={() => t.path !== activePath && void activateTab(t.path)}
         >
-          {t.stale && <span className="stale-dot" title="Changed on disk" />}
+          {t.stale && <span className="stale-dot" data-tip="Changed on disk" />}
           <span className="tab-name">{t.name}</span>
           <button
             className="tab-close"
-            title="Close tab"
+            data-tip="Close tab"
+            aria-label="Close tab"
             onClick={(e) => {
               e.stopPropagation()
               void closeTab(t.path)
@@ -35,7 +36,7 @@ export default function TabBar(): React.JSX.Element {
       ))}
       <button
         className="tab-add"
-        title="Open repository"
+        data-tip="Open repository"
         onClick={() =>
           void window.api.pickDirectory('Open repository').then((p) => (p ? open(p) : undefined))
         }

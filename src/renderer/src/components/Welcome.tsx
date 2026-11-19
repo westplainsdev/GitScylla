@@ -82,7 +82,7 @@ export default function Welcome(): React.JSX.Element {
                 key={r.path}
                 className="recent-row"
                 onClick={() => void openTab(r.path)}
-                title={r.path}
+                data-tip={r.path}
               >
                 <span className="recent-name">{r.name}</span>
                 <span className="recent-path">{r.path}</span>

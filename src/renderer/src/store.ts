@@ -70,6 +70,8 @@ interface RepoState {
 
   busy: string | null
   error: string | null
+  /** transient success/info line after an op ("Pushed 3 commits to origin/main") — auto-clears */
+  notice: string | null
   authRequest: AuthRequest | null
   /** pull hit diverged branches with no configured strategy — needs a merge/rebase choice */
   pullDivergent: boolean
@@ -78,6 +80,7 @@ interface RepoState {
   profile: GitProfile | null
 
   setError(e: string | null): void
+  flash(text: string): void
   setAuthRequest(r: AuthRequest | null): void
   setPullDivergent(v: boolean): void
   toggleProfile(): void
@@ -102,6 +105,8 @@ interface RepoState {
   closeDiff(): void
   run<T>(label: string, fn: (repo: string) => Promise<T>): Promise<T | undefined>
 }
+
+let noticeTimer: ReturnType<typeof setTimeout> | null = null
 
 export const useRepo = create<RepoState>((set, get) => {
   /** active repo path — throws if none (callers guard) */
@@ -145,6 +150,7 @@ export const useRepo = create<RepoState>((set, get) => {
 
     busy: null,
     error: null,
+    notice: null,
     authRequest: null,
     pullDivergent: false,
     profileOpen: false,
@@ -152,6 +158,11 @@ export const useRepo = create<RepoState>((set, get) => {
     profile: null,
 
     setError: (error) => set({ error }),
+    flash: (text) => {
+      if (noticeTimer) clearTimeout(noticeTimer)
+      set({ notice: text })
+      noticeTimer = setTimeout(() => set({ notice: null }), 6000)
+    },
     setAuthRequest: (authRequest) => set({ authRequest }),
     setPullDivergent: (pullDivergent) => set({ pullDivergent }),
 
@@ -241,6 +252,7 @@ export const useRepo = create<RepoState>((set, get) => {
             highlightRef: null,
             pinnedRef: null,
             pullDivergent: false,
+            notice: null,
             diffView: null,
             diffText: null
           })
@@ -261,6 +273,7 @@ export const useRepo = create<RepoState>((set, get) => {
         highlightRef: null,
         pinnedRef: null,
         pullDivergent: false,
+        notice: null,
         commitFileList: [],
         diffView: null,
         diffText: null,
@@ -285,6 +298,7 @@ export const useRepo = create<RepoState>((set, get) => {
         highlightRef: null,
         pinnedRef: null,
         pullDivergent: false,
+        notice: null,
         diffView: null,
         diffText: null
       })
@@ -412,6 +426,8 @@ export const useRepo = create<RepoState>((set, get) => {
       try {
         const r = await fn(repo)
         await get().refresh()
+        // git ops return a one-line summary — surface it so actions aren't silent
+        if (typeof r === 'string' && r) get().flash(r)
         return r
       } catch (e) {
         const host = authHost(e)

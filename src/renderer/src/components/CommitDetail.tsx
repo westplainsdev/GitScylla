@@ -41,7 +41,7 @@ export default function CommitDetail(): React.JSX.Element | null {
     <div className="detail-pane">
       <div className="detail-head">
         <code>{c.hash.slice(0, 10)}</code>
-        <button className="mini" title="Close" onClick={() => void select(null)}>
+        <button className="mini" data-tip="Close" aria-label="Close" onClick={() => void select(null)}>
           ✕
         </button>
       </div>
@@ -95,7 +95,7 @@ export default function CommitDetail(): React.JSX.Element | null {
           <button
             key={f.path}
             className="detail-file"
-            title={`${f.path} (${f.index})`}
+            data-tip={`${f.path} (${f.index})`}
             onClick={() =>
               void openDiff({
                 path: f.path,

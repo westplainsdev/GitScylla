@@ -21,7 +21,7 @@ export default function TopBar(): React.JSX.Element {
       <div className="repo-id">
         <span className="repo-name">{repo ? repo.name : 'GitScylla'}</span>
         {repo && (
-          <span className="repo-path" title={repo.path}>
+          <span className="repo-path" data-tip={repo.path}>
             {repo.path}
           </span>
         )}
@@ -43,7 +43,11 @@ export default function TopBar(): React.JSX.Element {
                 </option>
               ))}
             </select>
-            <button className="tb-btn" title="New branch" onClick={() => setNewBranch('')}>
+            <button
+              className="tb-btn"
+              data-tip="New branch"
+              onClick={() => setNewBranch('')}
+            >
               <Icon name="branch" size={18} />
               <span>Branch</span>
             </button>
@@ -82,13 +86,18 @@ export default function TopBar(): React.JSX.Element {
         {busy && <span className="busy">{busy}…</span>}
         {repo && (
           <>
-            <button className="tb-btn" title="Fetch" disabled={remotes.length === 0} onClick={() => act('fetch', (r) => window.api.fetch(r))}>
+            <button
+              className="tb-btn"
+              data-tip="Fetch"
+              disabled={remotes.length === 0}
+              onClick={() => act('fetch', (r) => window.api.fetch(r))}
+            >
               <Icon name="fetch" size={18} />
               <span>Fetch</span>
             </button>
             <button
               className="tb-btn"
-              title="Pull"
+              data-tip="Pull"
               disabled={remotes.length === 0}
               onClick={() => act('pull', (r) => window.api.pull(r))}
             >
@@ -97,7 +106,7 @@ export default function TopBar(): React.JSX.Element {
             </button>
             <button
               className="tb-btn"
-              title="Push"
+              data-tip="Push"
               disabled={remotes.length === 0}
               onClick={() =>
                 status && status.behind > 0
@@ -108,7 +117,7 @@ export default function TopBar(): React.JSX.Element {
               <Icon name="push" size={18} />
               <span>Push</span>
             </button>
-            <button className="tb-btn" title="Refresh" onClick={() => void refresh()}>
+            <button className="tb-btn" data-tip="Refresh" onClick={() => void refresh()}>
               <Icon name="refresh" size={18} />
               <span>Refresh</span>
             </button>
@@ -116,7 +125,7 @@ export default function TopBar(): React.JSX.Element {
         )}
         <button
           className="tb-btn"
-          title="Open repository"
+          data-tip="Open repository"
           onClick={() =>
             void window.api.pickDirectory('Open repository').then((p) => (p ? open(p) : undefined))
           }
@@ -124,7 +133,7 @@ export default function TopBar(): React.JSX.Element {
           <Icon name="open" size={18} />
           <span>Open</span>
         </button>
-        <button className="tb-btn" title="Profile & credentials" onClick={toggleProfile}>
+        <button className="tb-btn" data-tip="Profile & credentials" onClick={toggleProfile}>
           <Icon name="menu" size={18} />
           <span>Menu</span>
         </button>

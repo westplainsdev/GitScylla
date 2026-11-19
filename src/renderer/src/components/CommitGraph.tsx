@@ -36,10 +36,22 @@ function relTime(unixSec: number): string {
   return `${Math.floor(mo / 12)}y ago`
 }
 
-function refBadge(ref: string): { cls: string; label: string } {
-  if (ref.startsWith('tag: ')) return { cls: 'tag', label: ref.slice(5) }
-  if (ref.startsWith('origin/') || ref.includes('/')) return { cls: 'remote', label: ref }
-  return { cls: 'branch', label: ref }
+function refBadge(
+  ref: string,
+  remoteNames: string[]
+): { cls: string; label: string; title: string } {
+  if (ref.startsWith('tag: ')) {
+    const label = ref.slice(5)
+    return { cls: 'tag', label, title: `Tag '${label}' — fixed pointer to a commit` }
+  }
+  if (remoteNames.some((n) => ref.startsWith(`${n}/`))) {
+    return {
+      cls: 'remote',
+      label: ref,
+      title: `Remote-tracking branch '${ref}' — last-known state on the remote`
+    }
+  }
+  return { cls: 'branch', label: ref, title: `Local branch '${ref}'` }
 }
 
 const RESET_MODES: { mode: ResetMode; label: string; desc: string }[] = [
@@ -134,7 +146,8 @@ export default function CommitGraph({ commits }: { commits: CommitInfo[] }): Rea
     status,
     run,
     highlightRef,
-    pinnedRef
+    pinnedRef,
+    remotes
   } = useRepo()
   const layout = useMemo(() => layoutGraph(commits), [commits])
   const graphW = (layout.cols + 1) * COL_W + PAD_X
@@ -145,6 +158,7 @@ export default function CommitGraph({ commits }: { commits: CommitInfo[] }): Rea
 
   const current = status?.current
   const tracking = status?.tracking
+  const remoteNames = useMemo(() => remotes.map((r) => r.name), [remotes])
   const byHash = useMemo(() => new Map(commits.map((c) => [c.hash, c])), [commits])
   const headCommit = useMemo(
     () => (current ? commits.find((c) => c.refs.includes(current)) : undefined),
@@ -272,15 +286,15 @@ export default function CommitGraph({ commits }: { commits: CommitInfo[] }): Rea
           >
             <span className="refs">
               {c.refs.map((r) => {
-                const b = refBadge(r)
+                const b = refBadge(r, remoteNames)
                 return (
-                  <span key={r} className={`ref-badge ${b.cls}`}>
+                  <span key={r} className={`ref-badge ${b.cls}`} data-tip={b.title}>
                     {b.label}
                   </span>
                 )
               })}
             </span>
-            <span className="subject" title={c.subject}>
+            <span className="subject" data-tip={c.subject}>
               {c.subject}
             </span>
             <span className="author">{c.author}</span>

@@ -12,9 +12,10 @@ import DiffDrawer from './components/DiffDrawer'
 import CommitDetail from './components/CommitDetail'
 import RemoteBanner from './components/RemoteBanner'
 import Splash from './components/Splash'
+import Tooltip from './components/Tooltip'
 
 export default function App(): React.JSX.Element {
-  const { repo, commits, error, setError, boot, handleFsChange } = useRepo()
+  const { repo, commits, error, notice, setError, boot, handleFsChange } = useRepo()
   const [booted, setBooted] = useState(false)
   const [minElapsed, setMinElapsed] = useState(false)
   const [splashGone, setSplashGone] = useState(false)
@@ -52,6 +53,7 @@ export default function App(): React.JSX.Element {
           <span className="dismiss">✕</span>
         </div>
       )}
+      {notice && <div className="toast">{notice}</div>}
       {repo ? (
         <div className="body">
           <ChangesPane />
@@ -70,6 +72,7 @@ export default function App(): React.JSX.Element {
       <ReconcileDialog />
       <ProfileSidebar />
       <DiffDrawer />
+      <Tooltip />
       {!splashGone && <Splash fading={!splashVisible} />}
     </div>
   )

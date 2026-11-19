@@ -27,7 +27,7 @@ export default function StashList(): React.JSX.Element {
         <button
           className="mini"
           disabled={!dirty}
-          title={dirty ? 'Stash current changes' : 'No changes to stash'}
+          data-tip={dirty ? 'Stash current changes' : 'No changes to stash'}
           onClick={(e) => {
             e.stopPropagation()
             setStashing(true)
@@ -60,7 +60,7 @@ export default function StashList(): React.JSX.Element {
             <div
               key={s.index}
               className="branch-row stash-row"
-              title={s.message}
+              data-tip={s.message}
               onClick={() =>
                 void openDiff({ path: `stash@{${s.index}}`, staged: false, stashIndex: s.index })
               }
@@ -70,7 +70,7 @@ export default function StashList(): React.JSX.Element {
               <span className="stash-actions">
                 <button
                   className="mini"
-                  title="Apply and remove from stash"
+                  data-tip="Apply and remove from stash"
                   onClick={(e) => {
                     e.stopPropagation()
                     void run('stash pop', (r) => window.api.stashPop(r, s.index))
@@ -80,7 +80,7 @@ export default function StashList(): React.JSX.Element {
                 </button>
                 <button
                   className="mini"
-                  title="Apply, keep in stash"
+                  data-tip="Apply, keep in stash"
                   onClick={(e) => {
                     e.stopPropagation()
                     void run('stash apply', (r) => window.api.stashApply(r, s.index))
@@ -90,7 +90,7 @@ export default function StashList(): React.JSX.Element {
                 </button>
                 <button
                   className="mini danger"
-                  title="Drop stash"
+                  data-tip="Drop stash"
                   onClick={(e) => {
                     e.stopPropagation()
                     void run('stash drop', (r) => window.api.stashDrop(r, s.index))

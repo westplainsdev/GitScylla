@@ -130,14 +130,13 @@ export default function BranchList(): React.JSX.Element {
   const doDelete = async (t: { b: BranchInfo; force: boolean }): Promise<void> => {
     const r = await run('deleting', async (repo) => {
       try {
-        await window.api.deleteBranch(repo, t.b.name, t.force)
+        return await window.api.deleteBranch(repo, t.b.name, t.force)
       } catch (e) {
-        if (String(e).includes('GIT_BRANCH_UNMERGED')) return 'unmerged'
+        if (String(e).includes('GIT_BRANCH_UNMERGED')) return null
         throw e
       }
-      return 'ok'
     })
-    if (r === 'unmerged') setDelTarget({ b: t.b, force: true })
+    if (r === null) setDelTarget({ b: t.b, force: true })
   }
 
   const menuItemsFor = (b: BranchInfo, remoteRow: boolean): MenuItem[] => {
@@ -203,7 +202,7 @@ export default function BranchList(): React.JSX.Element {
           pinnedRef === b.name ? ' pinned' : ''
         }`}
         style={{ paddingLeft: PAD + depth * INDENT }}
-        title={`${b.name} — click to pin, double-click to checkout`}
+        data-tip={`${b.name} — click to pin, double-click to checkout`}
         onClick={() => setPinnedRef(pinnedRef === b.name ? null : b.name)}
         onDoubleClick={remoteRow ? () => remoteCheckout(b.name) : () => checkout(b.name)}
         onMouseEnter={() => setHighlightRef(b.name)}
@@ -216,10 +215,16 @@ export default function BranchList(): React.JSX.Element {
           {seg}
         </span>
         {relText && <span className="branch-rel">{relText}</span>}
+        {!remoteRow && b.upstream && (
+          <span className="branch-upstream" data-tip={`Tracking ${b.upstream} — push/pull target`}>
+            →{b.upstream}
+          </span>
+        )}
         {busy && b.current && <span className="branch-busy">{busy}…</span>}
         <button
           className="mini merge-btn"
-          title="Branch actions"
+          data-tip="Branch actions"
+          aria-label="Branch actions"
           onClick={(e) => {
             e.stopPropagation()
             setMenu({ x: e.clientX, y: e.clientY, b, remote: remoteRow })
@@ -240,7 +245,7 @@ export default function BranchList(): React.JSX.Element {
           key={`folder:${n.path}`}
           className="branch-row branch-folder"
           style={{ paddingLeft: PAD + depth * INDENT }}
-          title={n.path}
+          data-tip={n.path}
           onClick={() => toggleFold(n.path)}
         >
           <span className="collapse-arrow">{isFolded ? '▸' : '▾'}</span>

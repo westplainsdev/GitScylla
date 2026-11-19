@@ -70,13 +70,17 @@ function Section({
           {onDiscard && (
             <button
               className="mini danger"
-              title={discardTitle}
+              data-tip={discardTitle}
               onClick={() => onDiscard(rows.map((r) => r.path))}
             >
               ✕ all
             </button>
           )}
-          <button className="mini" title={actionTitle} onClick={() => onAction(rows.map((r) => r.path))}>
+          <button
+            className="mini"
+            data-tip={actionTitle}
+            onClick={() => onAction(rows.map((r) => r.path))}
+          >
             {action} all
           </button>
         </span>
@@ -85,7 +89,7 @@ function Section({
         <div
           key={keyOf(r)}
           className={`file-row${viewing === r.path ? ' viewing' : ''}`}
-          title={`${r.path} — ${CODE_LABEL[r.code] ?? r.code}`}
+          data-tip={`${r.path} — ${CODE_LABEL[r.code] ?? r.code}`}
           onClick={() => onView(r)}
         >
           {selectable && (
@@ -102,7 +106,7 @@ function Section({
             <>
               <button
                 className="mini"
-                title="Take our version"
+                data-tip="Take our version"
                 onClick={(e) => {
                   e.stopPropagation()
                   onResolve(r, 'ours')
@@ -112,7 +116,7 @@ function Section({
               </button>
               <button
                 className="mini"
-                title="Take their version"
+                data-tip="Take their version"
                 onClick={(e) => {
                   e.stopPropagation()
                   onResolve(r, 'theirs')
@@ -125,7 +129,7 @@ function Section({
           {onDiscard && (
             <button
               className="mini danger"
-              title={discardTitle}
+              data-tip={discardTitle}
               onClick={(e) => {
                 e.stopPropagation()
                 onDiscard([r.path])
@@ -136,7 +140,7 @@ function Section({
           )}
           <button
             className="mini"
-            title={r.kind === 'conflicted' ? 'Mark resolved (stage)' : actionTitle}
+            data-tip={r.kind === 'conflicted' ? 'Mark resolved (stage)' : actionTitle}
             onClick={(e) => {
               e.stopPropagation()
               onAction([r.path])
@@ -189,10 +193,7 @@ export default function ChangesPane(): React.JSX.Element {
   const stage = (paths: string[]): void => void run('staging', (repo) => window.api.stage(repo, paths))
   const unstage = (paths: string[]): void => void run('unstaging', (repo) => window.api.unstage(repo, paths))
   const commit = async (): Promise<void> => {
-    const r = await run('committing', async (repo) => {
-      await window.api.commit(repo, message)
-      return true
-    })
+    const r = await run('committing', (repo) => window.api.commit(repo, message))
     if (r) setMessage('')
   }
 
@@ -286,7 +287,7 @@ export default function ChangesPane(): React.JSX.Element {
         {!clean && (
           <button
             className="mini danger nuke-all"
-            title="Discard ALL changes — staged, unstaged, and untracked (cannot be undone)"
+            data-tip="Discard ALL changes — staged, unstaged, and untracked (cannot be undone)"
             onClick={askDiscardAll}
           >
             ✕ all
