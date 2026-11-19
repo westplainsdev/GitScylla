@@ -212,6 +212,13 @@ code {
   border-color: rgba(210, 153, 34, 0.55);
 }
 
+.toast-success {
+  color: #7ee787;
+  background: linear-gradient(rgba(63, 185, 80, 0.16), rgba(63, 185, 80, 0.16)),
+    var(--bg-2);
+  border-color: rgba(63, 185, 80, 0.55);
+}
+
 .toast-error {
   color: #ffa198;
   background: linear-gradient(rgba(248, 81, 73, 0.16), rgba(248, 81, 73, 0.16)), var(--bg-2);
@@ -226,6 +233,39 @@ code {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ---------- Tooltip ---------- */
+
+.app-tip {
+  position: fixed;
+  z-index: 300;
+  max-width: 480px;
+  padding: 5px 10px;
+  background: var(--bg-3);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: tip-in 0.12s ease;
+}
+
+.app-tip.above {
+  transform: translateY(-100%);
+}
+
+@keyframes tip-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

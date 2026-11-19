@@ -148,6 +148,8 @@ export interface GitApi {
   remotes(repo: string): Promise<RemoteInfo[]>
   addRemote(repo: string, name: string, url: string): Promise<void>
   removeRemote(repo: string, name: string): Promise<void>
+  /** does a path still exist on disk — used to prune dead repos from the session */
+  pathExists(path: string): Promise<boolean>
   /** app version for the About section */
   version(): Promise<string>
   /** persisted open-tab session */

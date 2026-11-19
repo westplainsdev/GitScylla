@@ -71,7 +71,7 @@ interface RepoState {
   busy: string | null
   error: string | null
   /** transient line after an op ("Pushed 3 commits to origin/main") — auto-clears */
-  notice: { text: string; kind: 'info' | 'warn' | 'error' } | null
+  notice: { text: string; kind: 'info' | 'warn' | 'error' | 'success' } | null
   authRequest: AuthRequest | null
   /** pull hit diverged branches with no configured strategy — needs a merge/rebase choice */
   pullDivergent: boolean
@@ -80,7 +80,7 @@ interface RepoState {
   profile: GitProfile | null
 
   setError(e: string | null): void
-  flash(text: string, kind?: 'info' | 'warn' | 'error'): void
+  flash(text: string, kind?: 'info' | 'warn' | 'error' | 'success'): void
   setAuthRequest(r: AuthRequest | null): void
   setPullDivergent(v: boolean): void
   toggleProfile(): void
@@ -91,7 +91,7 @@ interface RepoState {
   open(path: string): Promise<void>
   openTab(path: string): Promise<void>
   closeTab(path: string): Promise<void>
-  activateTab(path: string): Promise<void>
+  activateTab(path: string, save?: boolean): Promise<void>
   activateHome(): void
   clone(url: string, dir: string): Promise<void>
   init(path: string): Promise<void>
@@ -189,24 +189,42 @@ export const useRepo = create<RepoState>((set, get) => {
       set({ booted: true })
       const session = await window.api.loadSession()
       const live: Tab[] = []
+      const retry: string[] = []
       for (const path of session.open) {
         try {
           const info = await window.api.openRepo(path)
           live.push(info)
         } catch {
-          // path moved or is no longer a repo — drop silently
+          // dir still exists → keep in session and retry next launch;
+          // dir gone → prune permanently below
+          if (await window.api.pathExists(path)) retry.push(path)
         }
       }
-      set({
-        tabs: live,
-        recent: [...new Set([...(session.recent ?? []), ...session.open])].map((p) => ({
-          path: p,
-          name: baseName(p)
-        }))
-      })
+      // prune deleted paths out of the recent list too
+      const recentAll = [...new Set([...(session.recent ?? []), ...session.open])]
+      const exists = await Promise.all(recentAll.map((p) => window.api.pathExists(p)))
+      const recent = recentAll
+        .filter((_, i) => exists[i])
+        .map((p) => ({ path: p, name: baseName(p) }))
+      set({ tabs: live, recent })
+
       const active = live.find((t) => t.path === session.active)
-      if (active) await get().activateTab(active.path)
-      else saveSession()
+      if (active) await get().activateTab(active.path, false)
+
+      // persist only when the prune actually changed something — the file
+      // already holds the truth otherwise, and rewriting could clobber a race
+      const openKept = [...live.map((t) => t.path), ...retry]
+      if (
+        openKept.length !== session.open.length ||
+        (active?.path ?? null) !== session.active ||
+        recent.length !== recentAll.length
+      ) {
+        void window.api.saveSession({
+          open: openKept,
+          active: active?.path ?? null,
+          recent: recent.map((r) => r.path)
+        })
+      }
     },
 
     /** used by Welcome / Open button — opens and activates a tab */
@@ -264,7 +282,7 @@ export const useRepo = create<RepoState>((set, get) => {
       }
     },
 
-    activateTab: async (path) => {
+    activateTab: async (path, save = true) => {
       const tab = get().tabs.find((t) => t.path === path)
       if (!tab) return
       set({
@@ -280,7 +298,7 @@ export const useRepo = create<RepoState>((set, get) => {
         diffText: null,
         tabs: get().tabs.map((t) => (t.path === path ? { ...t, stale: false } : t))
       })
-      saveSession()
+      if (save) saveSession()
       await get().refresh()
     },
 
@@ -430,7 +448,8 @@ export const useRepo = create<RepoState>((set, get) => {
         // git ops return a one-line summary — surface it so actions aren't silent
         if (typeof r === 'string' && r) {
           // conflict-state results are warnings — the op landed but needs attention
-          get().flash(r, /conflict/i.test(r) ? 'warn' : 'info')
+          const kind = /conflict/i.test(r) ? 'warn' : label === 'push' ? 'success' : 'info'
+          get().flash(r, kind)
         }
         return r
       } catch (e) {

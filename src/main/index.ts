@@ -1,6 +1,14 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join, relative } from 'path'
-import { watch, stat, readFileSync, readdirSync, writeFileSync, type FSWatcher } from 'fs'
+import {
+  watch,
+  stat,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  existsSync,
+  type FSWatcher
+} from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { simpleGit } from 'simple-git'
 import icon from '../../resources/icon.png?asset'
@@ -210,6 +218,8 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('git:remove-remote', (_e, r: string, name: string) =>
     svc(r).removeRemote(name)
   )
+
+  ipcMain.handle('fs:exists', (_e, p: string) => existsSync(p))
 
   ipcMain.handle('session:load', () => {
     try {
