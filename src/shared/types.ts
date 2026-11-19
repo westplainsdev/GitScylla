@@ -93,6 +93,8 @@ export interface GitApi {
   branches(repo: string): Promise<BranchInfo[]>
   checkout(repo: string, name: string): Promise<void>
   createBranch(repo: string, name: string): Promise<void>
+  /** delete a local branch; force bypasses git's fully-merged safety check */
+  deleteBranch(repo: string, name: string, force: boolean): Promise<void>
   stage(repo: string, paths: string[]): Promise<void>
   unstage(repo: string, paths: string[]): Promise<void>
   /** restore unstaged tracked files to the index version — discards local edits */

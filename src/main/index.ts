@@ -153,6 +153,9 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('git:create-branch', (_e, r: string, name: string) =>
     svc(r).createBranch(name)
   )
+  ipcMain.handle('git:delete-branch', (_e, r: string, name: string, force: boolean) =>
+    svc(r).deleteBranch(name, force)
+  )
   ipcMain.handle('git:stage', (_e, r: string, paths: string[]) => svc(r).stage(paths))
   ipcMain.handle('git:unstage', (_e, r: string, paths: string[]) => svc(r).unstage(paths))
   ipcMain.handle('git:discard', (_e, r: string, paths: string[]) => svc(r).discardChanges(paths))

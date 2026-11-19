@@ -202,6 +202,17 @@ export class GitService {
     await this.require().checkoutLocalBranch(name)
   }
 
+  async deleteBranch(name: string, force: boolean): Promise<void> {
+    try {
+      await this.require().raw(['branch', force ? '-D' : '-d', name])
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e)
+      // tagged so the renderer can offer a force-delete confirm
+      if (/not fully merged/i.test(m)) throw new Error('GIT_BRANCH_UNMERGED')
+      throw e
+    }
+  }
+
   async stage(paths: string[]): Promise<void> {
     await this.require().add(paths)
   }

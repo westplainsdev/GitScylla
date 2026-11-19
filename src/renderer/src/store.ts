@@ -60,6 +60,10 @@ interface RepoState {
   stashes: StashEntry[]
   commitFileList: FileStatus[]
   selectedCommit: CommitInfo | null
+  /** branch name currently hovered in the sidebar — its lane lights up in the graph */
+  highlightRef: string | null
+  /** branch clicked in the sidebar — lane stays lit until another is pinned */
+  pinnedRef: string | null
   diffView: DiffTarget | null
   diffText: string | null
   diffLoading: boolean
@@ -89,6 +93,8 @@ interface RepoState {
   loadMore(): Promise<void>
   handleFsChange(path: string): void
   select(c: CommitInfo | null): Promise<void>
+  setHighlightRef(ref: string | null): void
+  setPinnedRef(ref: string | null): void
   openDiff(t: DiffTarget): Promise<void>
   closeDiff(): void
   run<T>(label: string, fn: (repo: string) => Promise<T>): Promise<T | undefined>
@@ -128,6 +134,8 @@ export const useRepo = create<RepoState>((set, get) => {
     stashes: [],
     commitFileList: [],
     selectedCommit: null,
+    highlightRef: null,
+    pinnedRef: null,
     diffView: null,
     diffText: null,
     diffLoading: false,
@@ -225,6 +233,8 @@ export const useRepo = create<RepoState>((set, get) => {
             remotes: [],
             stashes: [],
             selectedCommit: null,
+            highlightRef: null,
+            pinnedRef: null,
             diffView: null,
             diffText: null
           })
@@ -242,6 +252,8 @@ export const useRepo = create<RepoState>((set, get) => {
         activePath: path,
         repo: { path: tab.path, name: tab.name },
         selectedCommit: null,
+        highlightRef: null,
+        pinnedRef: null,
         commitFileList: [],
         diffView: null,
         diffText: null,
@@ -263,6 +275,8 @@ export const useRepo = create<RepoState>((set, get) => {
         stashes: [],
         commitFileList: [],
         selectedCommit: null,
+        highlightRef: null,
+        pinnedRef: null,
         diffView: null,
         diffText: null
       })
@@ -350,6 +364,9 @@ export const useRepo = create<RepoState>((set, get) => {
         set({ tabs: g.tabs.map((t) => (t.path === path ? { ...t, stale: true } : t)) })
       }
     },
+
+    setHighlightRef: (highlightRef) => set({ highlightRef }),
+    setPinnedRef: (pinnedRef) => set({ pinnedRef }),
 
     select: async (c) => {
       set({ selectedCommit: c, commitFileList: [] })

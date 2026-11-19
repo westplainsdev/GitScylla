@@ -140,7 +140,17 @@ function ResetDialog({
 }
 
 export default function CommitGraph({ commits }: { commits: CommitInfo[] }): React.JSX.Element {
-  const { selectedCommit, select, hasMore, loadingMore, loadMore, status, run } = useRepo()
+  const {
+    selectedCommit,
+    select,
+    hasMore,
+    loadingMore,
+    loadMore,
+    status,
+    run,
+    highlightRef,
+    pinnedRef
+  } = useRepo()
   const layout = useMemo(() => layoutGraph(commits), [commits])
   const graphW = (layout.cols + 1) * COL_W + PAD_X
 
@@ -192,6 +202,29 @@ export default function CommitGraph({ commits }: { commits: CommitInfo[] }): Rea
       ? !collectAncestors(byHash, [resetTarget.hash]).has(remoteTip.hash)
       : false
 
+  /**
+   * Spotlight: the checked-out branch's first-parent chain stays lit and
+   * everything else dims; hovering another branch temporarily spotlights it.
+   * `fp[i]` = row of commit i's first parent (undefined → beyond window/root).
+   */
+  const chain = useMemo(() => {
+    const ref = highlightRef ?? pinnedRef ?? current
+    if (!ref) return null
+    const rowOf = new Map(commits.map((c, i) => [c.hash, i]))
+    let i = commits.findIndex((c) => c.refs.includes(ref))
+    if (i === -1) return null // tip outside the loaded window — nothing to light
+    const rows = new Set<number>()
+    while (i !== -1 && !rows.has(i)) {
+      rows.add(i)
+      const p = commits[i].parents[0]
+      i = p !== undefined ? (rowOf.get(p) ?? -1) : -1
+    }
+    return {
+      rows,
+      fp: commits.map((c) => (c.parents[0] ? rowOf.get(c.parents[0]) : undefined))
+    }
+  }, [commits, highlightRef, pinnedRef, current])
+
   return (
     <div className="graph-scroll">
       <div className="graph-inner" style={{ paddingLeft: graphW }}>
@@ -201,39 +234,46 @@ export default function CommitGraph({ commits }: { commits: CommitInfo[] }): Rea
           height={commits.length * ROW_H + ROW_H}
           style={{ left: 0 }}
         >
-          {layout.edges.map((e, i) => (
-            <path
-              key={i}
-              d={edgePath(e.r1, e.c1, e.r2, e.c2)}
-              stroke={LANE_COLORS[e.colorIdx % LANE_COLORS.length]}
-              strokeWidth={1.6}
-              fill="none"
-              opacity={0.9}
-            />
-          ))}
-          {layout.nodes.map((n, i) => (
-            <g key={commits[i].hash}>
-              <circle
-                cx={x(n.lane)}
-                cy={y(i)}
-                r={4.2}
-                fill={LANE_COLORS[n.colorIdx % LANE_COLORS.length]}
-                stroke="#0d1117"
-                strokeWidth={2}
+          {layout.edges.map((e, i) => {
+            const lit =
+              chain !== null && chain.rows.has(e.r1) && e.r2 === (chain.fp[e.r1] ?? commits.length)
+            return (
+              <path
+                key={i}
+                d={edgePath(e.r1, e.c1, e.r2, e.c2)}
+                stroke={LANE_COLORS[e.colorIdx % LANE_COLORS.length]}
+                strokeWidth={lit ? 2.4 : 1.6}
+                fill="none"
+                opacity={chain ? (lit ? 1 : 0.12) : 0.9}
               />
-              {n.isMerge && (
+            )
+          })}
+          {layout.nodes.map((n, i) => {
+            const lit = chain !== null && chain.rows.has(i)
+            return (
+              <g key={commits[i].hash} opacity={chain ? (lit ? 1 : 0.15) : 1}>
                 <circle
                   cx={x(n.lane)}
                   cy={y(i)}
-                  r={7}
-                  fill="none"
-                  stroke={LANE_COLORS[n.colorIdx % LANE_COLORS.length]}
-                  strokeWidth={1}
-                  opacity={0.6}
+                  r={lit ? 5 : 4.2}
+                  fill={LANE_COLORS[n.colorIdx % LANE_COLORS.length]}
+                  stroke="#0d1117"
+                  strokeWidth={2}
                 />
-              )}
-            </g>
-          ))}
+                {n.isMerge && (
+                  <circle
+                    cx={x(n.lane)}
+                    cy={y(i)}
+                    r={7}
+                    fill="none"
+                    stroke={LANE_COLORS[n.colorIdx % LANE_COLORS.length]}
+                    strokeWidth={1}
+                    opacity={0.6}
+                  />
+                )}
+              </g>
+            )
+          })}
         </svg>
         {commits.map((c, i) => (
           <div

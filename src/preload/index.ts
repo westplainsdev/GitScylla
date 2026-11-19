@@ -13,6 +13,7 @@ const api: GitApi = {
   branches: (repo) => ipcRenderer.invoke('git:branches', repo),
   checkout: (repo, name) => ipcRenderer.invoke('git:checkout', repo, name),
   createBranch: (repo, name) => ipcRenderer.invoke('git:create-branch', repo, name),
+  deleteBranch: (repo, name, force) => ipcRenderer.invoke('git:delete-branch', repo, name, force),
   stage: (repo, paths) => ipcRenderer.invoke('git:stage', repo, paths),
   unstage: (repo, paths) => ipcRenderer.invoke('git:unstage', repo, paths),
   discardChanges: (repo, paths) => ipcRenderer.invoke('git:discard', repo, paths),
