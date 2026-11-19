@@ -150,6 +150,9 @@ function registerIpc(win: BrowserWindow): void {
   )
   ipcMain.handle('git:branches', (_e, r: string) => svc(r).branches())
   ipcMain.handle('git:checkout', (_e, r: string, name: string) => svc(r).checkout(name))
+  ipcMain.handle('git:checkout-remote', (_e, r: string, ref: string) =>
+    svc(r).checkoutRemote(ref)
+  )
   ipcMain.handle('git:create-branch', (_e, r: string, name: string) =>
     svc(r).createBranch(name)
   )
@@ -195,7 +198,10 @@ function registerIpc(win: BrowserWindow): void {
   ipcMain.handle('git:stash-drop', (_e, r: string, i: number) => svc(r).stashDrop(i))
   ipcMain.handle('git:stash-show', (_e, r: string, i: number) => svc(r).stashShow(i))
   ipcMain.handle('git:fetch', (_e, r: string) => svc(r).fetch())
-  ipcMain.handle('git:pull', (_e, r: string) => svc(r).pull())
+  ipcMain.handle('git:pull', (_e, r: string, rebase?: boolean) => svc(r).pull(rebase))
+  ipcMain.handle('git:pull-strategy', (_e, r: string, rebase: boolean) =>
+    svc(r).setPullStrategy(rebase)
+  )
   ipcMain.handle('git:push', (_e, r: string) => svc(r).push())
   ipcMain.handle('git:remotes', (_e, r: string) => svc(r).remotes())
   ipcMain.handle('git:add-remote', (_e, r: string, name: string, url: string) =>

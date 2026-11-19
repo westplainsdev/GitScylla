@@ -27,6 +27,8 @@ npm run build:linux                     # package via electron-builder
 
 ## Notes for future work
 
+- `electron-vite dev` hot-reloads `src/renderer/` but does **not** reliably rebuild/relaunch
+  on `src/main/` or `src/preload/` changes — restart the dev command after touching those.
 - Commit log uses `git log --all --topo-order --decorate=short` with `\x1f`/`\x1e`
   separators; capped at 500 — needs "load more" + virtualization next.
 - To go fully standalone (no system git), swap `simple-git` for `dugite` behind the same

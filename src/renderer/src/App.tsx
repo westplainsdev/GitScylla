@@ -6,6 +6,7 @@ import TabBar from './components/TabBar'
 import ChangesPane from './components/ChangesPane'
 import CommitGraph from './components/CommitGraph'
 import AuthDialog from './components/AuthDialog'
+import ReconcileDialog from './components/ReconcileDialog'
 import ProfileSidebar from './components/ProfileSidebar'
 import DiffDrawer from './components/DiffDrawer'
 import CommitDetail from './components/CommitDetail'
@@ -66,6 +67,7 @@ export default function App(): React.JSX.Element {
         <Welcome />
       )}
       <AuthDialog />
+      <ReconcileDialog />
       <ProfileSidebar />
       <DiffDrawer />
       {!splashGone && <Splash fading={!splashVisible} />}

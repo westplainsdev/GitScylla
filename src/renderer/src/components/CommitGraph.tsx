@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { CommitInfo, ResetMode } from '../../../shared/types'
-import { layoutGraph, LANE_COLORS } from '../graph'
+import { layoutGraph, LANE_COLORS, ancestorsOf } from '../graph'
 import { useRepo } from '../store'
 import ContextMenu, { type MenuItem } from './ContextMenu'
 import ConfirmDialog from './ConfirmDialog'
@@ -40,21 +40,6 @@ function refBadge(ref: string): { cls: string; label: string } {
   if (ref.startsWith('tag: ')) return { cls: 'tag', label: ref.slice(5) }
   if (ref.startsWith('origin/') || ref.includes('/')) return { cls: 'remote', label: ref }
   return { cls: 'branch', label: ref }
-}
-
-/** all commits reachable from `roots` by walking parents within the loaded window */
-function collectAncestors(byHash: Map<string, CommitInfo>, roots: string[]): Set<string> {
-  const seen = new Set<string>()
-  const stack = [...roots]
-  while (stack.length > 0) {
-    const h = stack.pop()!
-    if (seen.has(h)) continue
-    const c = byHash.get(h)
-    if (!c) continue // outside the loaded window — treat as a leaf
-    seen.add(h)
-    stack.push(...c.parents)
-  }
-  return seen
 }
 
 const RESET_MODES: { mode: ResetMode; label: string; desc: string }[] = [
@@ -107,7 +92,7 @@ function ResetDialog({
             )}
           </p>
           {RESET_MODES.map((m) => (
-            <label key={m.mode} className="reset-opt">
+            <label key={m.mode} className="radio-opt">
               <input
                 type="radio"
                 name="reset-mode"
@@ -170,7 +155,7 @@ export default function CommitGraph({ commits }: { commits: CommitInfo[] }): Rea
     [commits, tracking]
   )
   const onHeadBranch = useMemo(
-    () => (headCommit ? collectAncestors(byHash, [headCommit.hash]) : new Set<string>()),
+    () => (headCommit ? ancestorsOf(byHash, [headCommit.hash]) : new Set<string>()),
     [byHash, headCommit]
   )
 
@@ -198,9 +183,7 @@ export default function CommitGraph({ commits }: { commits: CommitInfo[] }): Rea
 
   // resetting to this commit would drop the remote tip → pushed history rewritten
   const resetDropsRemote =
-    resetTarget && remoteTip
-      ? !collectAncestors(byHash, [resetTarget.hash]).has(remoteTip.hash)
-      : false
+    resetTarget && remoteTip ? !ancestorsOf(byHash, [resetTarget.hash]).has(remoteTip.hash) : false
 
   /**
    * Spotlight: the checked-out branch's first-parent chain stays lit and

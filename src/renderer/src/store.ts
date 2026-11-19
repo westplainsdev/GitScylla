@@ -71,12 +71,15 @@ interface RepoState {
   busy: string | null
   error: string | null
   authRequest: AuthRequest | null
+  /** pull hit diverged branches with no configured strategy — needs a merge/rebase choice */
+  pullDivergent: boolean
   profileOpen: boolean
   credentials: CredentialEntry[]
   profile: GitProfile | null
 
   setError(e: string | null): void
   setAuthRequest(r: AuthRequest | null): void
+  setPullDivergent(v: boolean): void
   toggleProfile(): void
   loadCredentials(): Promise<void>
   loadProfile(): Promise<void>
@@ -143,12 +146,14 @@ export const useRepo = create<RepoState>((set, get) => {
     busy: null,
     error: null,
     authRequest: null,
+    pullDivergent: false,
     profileOpen: false,
     credentials: [],
     profile: null,
 
     setError: (error) => set({ error }),
     setAuthRequest: (authRequest) => set({ authRequest }),
+    setPullDivergent: (pullDivergent) => set({ pullDivergent }),
 
     toggleProfile: () => {
       const opening = !get().profileOpen
@@ -235,6 +240,7 @@ export const useRepo = create<RepoState>((set, get) => {
             selectedCommit: null,
             highlightRef: null,
             pinnedRef: null,
+            pullDivergent: false,
             diffView: null,
             diffText: null
           })
@@ -254,6 +260,7 @@ export const useRepo = create<RepoState>((set, get) => {
         selectedCommit: null,
         highlightRef: null,
         pinnedRef: null,
+        pullDivergent: false,
         commitFileList: [],
         diffView: null,
         diffText: null,
@@ -277,6 +284,7 @@ export const useRepo = create<RepoState>((set, get) => {
         selectedCommit: null,
         highlightRef: null,
         pinnedRef: null,
+        pullDivergent: false,
         diffView: null,
         diffText: null
       })
@@ -409,6 +417,8 @@ export const useRepo = create<RepoState>((set, get) => {
         const host = authHost(e)
         if (host) {
           set({ authRequest: { host, retry: () => void get().run(label, fn) } })
+        } else if (msg(e).includes('GIT_PULL_DIVERGENT')) {
+          set({ pullDivergent: true })
         } else {
           set({ error: msg(e) })
         }

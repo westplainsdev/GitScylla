@@ -92,6 +92,8 @@ export interface GitApi {
   log(repo: string, limit?: number, skip?: number): Promise<CommitInfo[]>
   branches(repo: string): Promise<BranchInfo[]>
   checkout(repo: string, name: string): Promise<void>
+  /** switch to a remote ref's branch — reuses the local branch or creates one that tracks it */
+  checkoutRemote(repo: string, remoteRef: string): Promise<void>
   createBranch(repo: string, name: string): Promise<void>
   /** delete a local branch; force bypasses git's fully-merged safety check */
   deleteBranch(repo: string, name: string, force: boolean): Promise<void>
@@ -137,7 +139,9 @@ export interface GitApi {
   /** unified diff of a stash entry */
   stashShow(repo: string, index: number): Promise<string>
   fetch(repo: string): Promise<void>
-  pull(repo: string): Promise<void>
+  pull(repo: string, rebase?: boolean): Promise<void>
+  /** persist the reconcile strategy for this repo (git config pull.rebase) */
+  setPullStrategy(repo: string, rebase: boolean): Promise<void>
   push(repo: string): Promise<void>
   remotes(repo: string): Promise<RemoteInfo[]>
   addRemote(repo: string, name: string, url: string): Promise<void>

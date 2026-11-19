@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { BranchInfo } from '../../../shared/types'
-import { layoutGraph, LANE_COLORS } from '../graph'
+import { layoutGraph, LANE_COLORS, ancestorsOf } from '../graph'
 import { useRepo } from '../store'
 import ContextMenu, { type MenuItem } from './ContextMenu'
 import ConfirmDialog from './ConfirmDialog'
@@ -85,10 +85,38 @@ export default function BranchList(): React.JSX.Element {
     return map
   }, [commits])
 
+  /** branch → commits ahead/behind the current branch tip — "how does this branch relate" */
+  const currentBranch = status?.current
+  const relCounts = useMemo(() => {
+    const map = new Map<string, { ahead: number; behind: number }>()
+    const head = currentBranch ? commits.find((c) => c.refs.includes(currentBranch)) : undefined
+    if (!head) return map
+    const byHash = new Map(commits.map((c) => [c.hash, c]))
+    const headAnc = ancestorsOf(byHash, [head.hash])
+    for (const b of branches) {
+      if (b.remote || b.name === currentBranch) continue
+      const tip = commits.find((c) => c.refs.includes(b.name))
+      if (!tip) continue // tip outside the loaded window — can't compare
+      const anc = ancestorsOf(byHash, [tip.hash])
+      let ahead = 0
+      let behind = 0
+      for (const h of anc) if (!headAnc.has(h)) ahead++
+      for (const h of headAnc) if (!anc.has(h)) behind++
+      map.set(b.name, { ahead, behind })
+    }
+    return map
+  }, [commits, branches, currentBranch])
+
   const checkout = (branch: string): void => {
     if (branch === status?.current) return
     setPinnedRef(null) // the newly-current branch takes the spotlight
     void run('checkout', (r) => window.api.checkout(r, branch))
+  }
+
+  /** checkout of a remote ref — creates a local tracking branch when one doesn't exist */
+  const remoteCheckout = (remoteRef: string): void => {
+    setPinnedRef(null)
+    void run('checkout', (r) => window.api.checkoutRemote(r, remoteRef))
   }
 
   const create = (): void => {
@@ -114,6 +142,17 @@ export default function BranchList(): React.JSX.Element {
 
   const menuItemsFor = (b: BranchInfo, remoteRow: boolean): MenuItem[] => {
     const items: MenuItem[] = []
+    if (remoteRow) {
+      const localName = b.name.split('/').slice(1).join('/')
+      const exists = local.some((l) => l.name === localName)
+      const currentLocal = status?.current === localName
+      if (!currentLocal) {
+        items.push({
+          label: exists ? 'Checkout' : 'Checkout (new local branch)',
+          onClick: () => remoteCheckout(b.name)
+        })
+      }
+    }
     if (!remoteRow && !b.current) {
       items.push({ label: 'Checkout', onClick: () => checkout(b.name) })
       items.push({
@@ -151,6 +190,12 @@ export default function BranchList(): React.JSX.Element {
     remoteRow: boolean
   ): React.JSX.Element => {
     const laneColor = laneColors.get(b.name)
+    const rel = relCounts.get(b.name)
+    const relText = rel
+      ? [rel.ahead > 0 ? `↑${rel.ahead}` : '', rel.behind > 0 ? `↓${rel.behind}` : '']
+          .filter(Boolean)
+          .join(' ')
+      : ''
     return (
       <div
         key={b.name}
@@ -158,9 +203,9 @@ export default function BranchList(): React.JSX.Element {
           pinnedRef === b.name ? ' pinned' : ''
         }`}
         style={{ paddingLeft: PAD + depth * INDENT }}
-        title={remoteRow ? b.name : `${b.name} — click to pin, double-click to checkout`}
+        title={`${b.name} — click to pin, double-click to checkout`}
         onClick={() => setPinnedRef(pinnedRef === b.name ? null : b.name)}
-        onDoubleClick={remoteRow ? undefined : () => checkout(b.name)}
+        onDoubleClick={remoteRow ? () => remoteCheckout(b.name) : () => checkout(b.name)}
         onMouseEnter={() => setHighlightRef(b.name)}
         onMouseLeave={() => setHighlightRef(null)}
       >
@@ -170,6 +215,7 @@ export default function BranchList(): React.JSX.Element {
         <span className="branch-name" style={{ color: laneColor }}>
           {seg}
         </span>
+        {relText && <span className="branch-rel">{relText}</span>}
         {busy && b.current && <span className="branch-busy">{busy}…</span>}
         <button
           className="mini merge-btn"

@@ -20,6 +20,21 @@ export interface GraphLayout {
   cols: number
 }
 
+/** all commit hashes reachable from `roots` by walking parents within `byHash` */
+export function ancestorsOf(byHash: Map<string, CommitInfo>, roots: string[]): Set<string> {
+  const seen = new Set<string>()
+  const stack = [...roots]
+  while (stack.length > 0) {
+    const h = stack.pop()!
+    if (seen.has(h)) continue
+    const c = byHash.get(h)
+    if (!c) continue // outside the loaded window — treat as a leaf
+    seen.add(h)
+    stack.push(...c.parents)
+  }
+  return seen
+}
+
 export const LANE_COLORS = [
   '#58a6ff',
   '#3fb950',

@@ -479,6 +479,12 @@ code {
   text-overflow: ellipsis;
 }
 
+.branch-rel {
+  color: var(--fg-dim);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
 .branch-busy {
   margin-left: auto;
   color: var(--fg-dim);
@@ -1167,7 +1173,7 @@ tr.dl-conflict .dl-code {
   color: var(--orange);
 }
 
-.modal .reset-opt {
+.modal .radio-opt {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -1179,26 +1185,26 @@ tr.dl-conflict .dl-code {
   cursor: pointer;
 }
 
-.modal .reset-opt:hover {
+.modal .radio-opt:hover {
   border-color: var(--fg-dim);
 }
 
-.modal .reset-opt input {
+.modal .radio-opt input {
   margin-top: 3px;
 }
 
-.modal .reset-opt > span {
+.modal .radio-opt > span {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.modal .reset-opt strong {
+.modal .radio-opt strong {
   color: var(--fg);
   font-size: 12px;
 }
 
-.modal .reset-opt small {
+.modal .radio-opt small {
   font-size: 11px;
 }
 
@@ -1368,6 +1374,16 @@ button.danger {
 
 button.danger:hover:not(:disabled) {
   border-color: var(--red);
+}
+
+button.primary.danger {
+  color: #fff;
+  background: #da3633;
+  border-color: var(--red);
+}
+
+button.primary.danger:hover:not(:disabled) {
+  background: var(--red);
 }
 
 .empty-note {

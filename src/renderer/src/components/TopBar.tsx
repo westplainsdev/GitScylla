@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useRepo } from '../store'
 import Icon from './icons'
+import ConfirmDialog from './ConfirmDialog'
 
 export default function TopBar(): React.JSX.Element {
   const { repo, status, branches, remotes, busy, run, refresh, open, toggleProfile } =
     useRepo()
   const [newBranch, setNewBranch] = useState<string | null>(null)
   const [branchName, setBranchName] = useState('')
+  const [behindWarn, setBehindWarn] = useState(false)
 
   const local = branches.filter((b) => !b.remote)
 
@@ -84,11 +86,25 @@ export default function TopBar(): React.JSX.Element {
               <Icon name="fetch" size={18} />
               <span>Fetch</span>
             </button>
-            <button className="tb-btn" title="Pull" disabled={remotes.length === 0} onClick={() => act('pull', (r) => window.api.pull(r))}>
+            <button
+              className="tb-btn"
+              title="Pull"
+              disabled={remotes.length === 0}
+              onClick={() => act('pull', (r) => window.api.pull(r))}
+            >
               <Icon name="pull" size={18} />
-              <span>Pull</span>
+              <span>Pull{status && status.behind > 0 ? ` (${status.behind})` : ''}</span>
             </button>
-            <button className="tb-btn" title="Push" disabled={remotes.length === 0} onClick={() => act('push', (r) => window.api.push(r))}>
+            <button
+              className="tb-btn"
+              title="Push"
+              disabled={remotes.length === 0}
+              onClick={() =>
+                status && status.behind > 0
+                  ? setBehindWarn(true)
+                  : act('push', (r) => window.api.push(r))
+              }
+            >
               <Icon name="push" size={18} />
               <span>Push</span>
             </button>
@@ -113,6 +129,25 @@ export default function TopBar(): React.JSX.Element {
           <span>Menu</span>
         </button>
       </div>
+      {behindWarn && status && (
+        <ConfirmDialog
+          title="Pull before pushing?"
+          body={
+            <p>
+              <code>{status.tracking}</code> has {status.behind} commit
+              {status.behind === 1 ? '' : 's'} you don&apos;t have — your push would be
+              rejected as non-fast-forward. Pull to integrate them first.
+            </p>
+          }
+          confirmLabel="Pull"
+          danger={false}
+          onConfirm={() => {
+            setBehindWarn(false)
+            act('pull', (r) => window.api.pull(r))
+          }}
+          onCancel={() => setBehindWarn(false)}
+        />
+      )}
     </header>
   )
 }

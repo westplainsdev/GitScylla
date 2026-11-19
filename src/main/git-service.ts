@@ -198,6 +198,21 @@ export class GitService {
     await this.require().checkout(name)
   }
 
+  /** "make a local copy of origin/x": checkout x if it exists, else create it tracking the remote ref */
+  async checkoutRemote(remoteRef: string): Promise<void> {
+    const local = remoteRef.split('/').slice(1).join('/')
+    const git = this.require()
+    const exists = await git
+      .raw(['show-ref', '--verify', '--quiet', `refs/heads/${local}`])
+      .then(() => true)
+      .catch(() => false)
+    if (exists) {
+      await git.checkout(local)
+    } else {
+      await git.raw(['checkout', '-b', local, '--track', remoteRef])
+    }
+  }
+
   async createBranch(name: string): Promise<void> {
     await this.require().checkoutLocalBranch(name)
   }
@@ -208,7 +223,7 @@ export class GitService {
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e)
       // tagged so the renderer can offer a force-delete confirm
-      if (/not fully merged/i.test(m)) throw new Error('GIT_BRANCH_UNMERGED')
+      if (/not fully merged/i.test(m)) throw new Error('GIT_BRANCH_UNMERGED', { cause: e })
       throw e
     }
   }
@@ -276,11 +291,17 @@ export class GitService {
     await this.authed(await this.remoteHost(), (g) => g.fetch(['--all', '--prune']))
   }
 
-  async pull(): Promise<void> {
+  async pull(rebase?: boolean): Promise<void> {
     await this.authed(await this.remoteHost(), async (g) => {
       try {
-        await g.pull()
+        const strategy = rebase === undefined ? [] : rebase ? ['--rebase'] : ['--no-rebase']
+        await g.raw(['pull', ...strategy])
       } catch (e) {
+        const m = e instanceof Error ? e.message : String(e)
+        // no reconcile strategy configured — tagged so the UI can ask merge-vs-rebase
+        if (/divergent branches|have diverged/i.test(m)) {
+          throw new Error('GIT_PULL_DIVERGENT', { cause: e })
+        }
         // merge conflicts on pull are a state, not a failure — the UI shows the merge banner
         if (isConflict(e)) return
         throw e
@@ -288,14 +309,32 @@ export class GitService {
     })
   }
 
+  async setPullStrategy(rebase: boolean): Promise<void> {
+    await this.require().raw(['config', 'pull.rebase', String(rebase)])
+  }
+
   async push(): Promise<void> {
     const host = await this.remoteHost()
     const s = await this.require().status()
-    await this.authed(host, (g) =>
-      s.current && !s.tracking
-        ? g.push(['--set-upstream', 'origin', s.current])
-        : g.push()
-    )
+    await this.authed(host, async (g) => {
+      try {
+        if (s.current && !s.tracking) {
+          await g.push(['--set-upstream', 'origin', s.current])
+        } else {
+          await g.push()
+        }
+      } catch (e) {
+        const m = e instanceof Error ? e.message : String(e)
+        // someone pushed since our last fetch — translate git's rejection
+        if (/non-fast-forward|fetch first|tip of your current branch is behind/i.test(m)) {
+          throw new Error(
+            'Push rejected — the remote has newer commits. Pull first, then push again.',
+            { cause: e }
+          )
+        }
+        throw e
+      }
+    })
   }
 
   async remotes(): Promise<RemoteInfo[]> {
