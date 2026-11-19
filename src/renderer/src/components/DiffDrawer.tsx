@@ -3,7 +3,7 @@ import { parseDiff } from '../diff'
 import { useRepo } from '../store'
 
 export default function DiffDrawer(): React.JSX.Element | null {
-  const { diffView, diffText, diffLoading, closeDiff } = useRepo()
+  const { diffView, diffText, diffLoading, closeDiff, commitFileList, openDiff } = useRepo()
 
   useEffect(() => {
     if (!diffView) return
@@ -35,25 +35,55 @@ export default function DiffDrawer(): React.JSX.Element | null {
           ✕
         </button>
       </div>
-      <div className="diff-body">
-        {diffLoading && <div className="diff-empty">Loading…</div>}
-        {!diffLoading && lines.length === 0 && <div className="diff-empty">No changes</div>}
-        {!diffLoading && lines.length > 0 && (
-          <table className="diff-table">
-            <tbody>
-              {lines.map((l, i) => (
-                <tr key={i} className={`dl-${l.type}`}>
-                  <td className="dl-no">{l.oldNo ?? ''}</td>
-                  <td className="dl-no">{l.newNo ?? ''}</td>
-                  <td className="dl-mark">
-                    {l.type === 'add' ? '+' : l.type === 'del' ? '−' : l.type === 'hunk' ? '' : ' '}
-                  </td>
-                  <td className="dl-code">{l.content}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="diff-main">
+        {diffView.hash && commitFileList.length > 1 && (
+          <div className="diff-files">
+            {commitFileList.map((f) => (
+              <button
+                key={f.path}
+                className={`detail-file${f.path === diffView.path ? ' active' : ''}`}
+                data-tip="View changes"
+                onClick={() =>
+                  void openDiff({
+                    path: f.path,
+                    staged: false,
+                    hash: diffView.hash,
+                    parent: diffView.parent ?? null
+                  })
+                }
+              >
+                <span className={`code code-${f.index}`}>{f.index}</span>
+                <span className="file-path">{f.path}</span>
+              </button>
+            ))}
+          </div>
         )}
+        <div className="diff-body">
+          {diffLoading && <div className="diff-empty">Loading…</div>}
+          {!diffLoading && lines.length === 0 && <div className="diff-empty">No changes</div>}
+          {!diffLoading && lines.length > 0 && (
+            <table className="diff-table">
+              <tbody>
+                {lines.map((l, i) => (
+                  <tr key={i} className={`dl-${l.type}`}>
+                    <td className="dl-no">{l.oldNo ?? ''}</td>
+                    <td className="dl-no">{l.newNo ?? ''}</td>
+                    <td className="dl-mark">
+                      {l.type === 'add'
+                        ? '+'
+                        : l.type === 'del'
+                          ? '−'
+                          : l.type === 'hunk'
+                            ? ''
+                            : ' '}
+                    </td>
+                    <td className="dl-code">{l.content}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </aside>
   )

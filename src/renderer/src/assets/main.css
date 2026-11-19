@@ -1050,8 +1050,16 @@ code {
   text-align: left;
 }
 
+.detail-file.active {
+  background: rgba(88, 166, 255, 0.15);
+  color: var(--accent);
+}
+
 .detail-file .file-path {
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---------- Diff drawer ---------- */
@@ -1085,6 +1093,23 @@ code {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.diff-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.diff-files {
+  width: 200px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .diff-body {
