@@ -70,8 +70,8 @@ interface RepoState {
 
   busy: string | null
   error: string | null
-  /** transient success/info line after an op ("Pushed 3 commits to origin/main") — auto-clears */
-  notice: string | null
+  /** transient line after an op ("Pushed 3 commits to origin/main") — auto-clears */
+  notice: { text: string; kind: 'info' | 'warn' | 'error' } | null
   authRequest: AuthRequest | null
   /** pull hit diverged branches with no configured strategy — needs a merge/rebase choice */
   pullDivergent: boolean
@@ -80,7 +80,7 @@ interface RepoState {
   profile: GitProfile | null
 
   setError(e: string | null): void
-  flash(text: string): void
+  flash(text: string, kind?: 'info' | 'warn' | 'error'): void
   setAuthRequest(r: AuthRequest | null): void
   setPullDivergent(v: boolean): void
   toggleProfile(): void
@@ -158,10 +158,11 @@ export const useRepo = create<RepoState>((set, get) => {
     profile: null,
 
     setError: (error) => set({ error }),
-    flash: (text) => {
+    flash: (text, kind = 'info') => {
       if (noticeTimer) clearTimeout(noticeTimer)
-      set({ notice: text })
-      noticeTimer = setTimeout(() => set({ notice: null }), 6000)
+      set({ notice: { text, kind } })
+      // errors linger — they're easy to miss at 6s
+      noticeTimer = setTimeout(() => set({ notice: null }), kind === 'error' ? 10000 : 6000)
     },
     setAuthRequest: (authRequest) => set({ authRequest }),
     setPullDivergent: (pullDivergent) => set({ pullDivergent }),
@@ -427,7 +428,10 @@ export const useRepo = create<RepoState>((set, get) => {
         const r = await fn(repo)
         await get().refresh()
         // git ops return a one-line summary — surface it so actions aren't silent
-        if (typeof r === 'string' && r) get().flash(r)
+        if (typeof r === 'string' && r) {
+          // conflict-state results are warnings — the op landed but needs attention
+          get().flash(r, /conflict/i.test(r) ? 'warn' : 'info')
+        }
         return r
       } catch (e) {
         const host = authHost(e)
@@ -437,6 +441,7 @@ export const useRepo = create<RepoState>((set, get) => {
           set({ pullDivergent: true })
         } else {
           set({ error: msg(e) })
+          get().flash(msg(e), 'error')
         }
         return undefined
       } finally {

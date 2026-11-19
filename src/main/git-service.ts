@@ -76,7 +76,9 @@ export class GitService {
     try {
       return await fn(git)
     } catch (e) {
-      if (isAuthError(e)) throw new Error(`GIT_AUTH_REQUIRED:${host ?? 'unknown'}`)
+      if (isAuthError(e)) {
+        throw new Error(`GIT_AUTH_REQUIRED:${host ?? 'unknown'}`, { cause: e })
+      }
       throw e
     }
   }
@@ -115,7 +117,9 @@ export class GitService {
     try {
       await git.clone(url, target)
     } catch (e) {
-      if (isAuthError(e)) throw new Error(`GIT_AUTH_REQUIRED:${host ?? 'unknown'}`)
+      if (isAuthError(e)) {
+        throw new Error(`GIT_AUTH_REQUIRED:${host ?? 'unknown'}`, { cause: e })
+      }
       throw e
     }
     return this.open(target)

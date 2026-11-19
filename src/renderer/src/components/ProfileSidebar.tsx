@@ -8,12 +8,16 @@ function IdentitySection(): React.JSX.Element {
   const [email, setEmail] = useState('')
   const [saved, setSaved] = useState(false)
 
-  useEffect(() => {
+  // resync inputs when the loaded profile changes (adjusting state during render
+  // is the recommended replacement for a setState-in-effect here)
+  const [prevProfile, setPrevProfile] = useState(profile)
+  if (profile !== prevProfile) {
+    setPrevProfile(profile)
     if (profile) {
       setName(profile.name)
       setEmail(profile.email)
     }
-  }, [profile])
+  }
 
   const dirty = profile !== null && (name !== profile.name || email !== profile.email)
 

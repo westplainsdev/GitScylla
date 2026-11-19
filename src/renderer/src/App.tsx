@@ -33,15 +33,15 @@ export default function App(): React.JSX.Element {
 
   const splashVisible = !(booted && minElapsed)
 
-  if (new URLSearchParams(location.search).has('splash')) {
-    return <Splash fading={false} />
-  }
-
   useEffect(() => {
     if (splashVisible) return
     const t = setTimeout(() => setSplashGone(true), 450)
     return () => clearTimeout(t)
   }, [splashVisible])
+
+  if (new URLSearchParams(location.search).has('splash')) {
+    return <Splash fading={false} />
+  }
 
   return (
     <div className="app">
@@ -53,7 +53,7 @@ export default function App(): React.JSX.Element {
           <span className="dismiss">✕</span>
         </div>
       )}
-      {notice && <div className="toast">{notice}</div>}
+      {notice && <div className={`toast toast-${notice.kind}`}>{notice.text}</div>}
       {repo ? (
         <div className="body">
           <ChangesPane />
