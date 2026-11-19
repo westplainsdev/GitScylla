@@ -127,3 +127,12 @@ only to answer git's credential prompts.
 
 [MIT](LICENSE)
 
+## Change Log
+
+### 1.0.0 (2025-10-16)
+- Initial release
+- Basic Git operations (clone, pull, push, fetch)
+- File watching and status tracking
+- GitHub authentication with personal access tokens
+- Session persistence
+- Linux AppImage and Debian package builds
